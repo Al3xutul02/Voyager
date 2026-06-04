@@ -61,7 +61,12 @@ public class Program
             });
 
             // Setup event subscriptions
-
+            discordClient.Ready += Events.EventHandler.OnReady;
+            discordClient.GuildCreated += Events.EventHandler.GuildCreated;
+            discordClient.GuildDeleted += Events.EventHandler.GuildDeleted;
+            discordClient.GuildMemberAdded += Events.EventHandler.GuildMemberAdded;
+            discordClient.GuildMemberRemoved += Events.EventHandler.GuildMemberRemoved;
+            discordClient.ComponentInteractionCreated += Events.EventHandler.ComponentInteractionCreated;
 
             var slashCommandsConfig = discordClient.UseSlashCommands(new SlashCommandsConfiguration
             {
