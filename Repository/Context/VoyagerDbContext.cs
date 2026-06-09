@@ -20,6 +20,9 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
             entity.ToTable("users");
             entity.HasKey(u => u.Id);
 
+            entity.Property(u => u.Id)
+                  .ValueGeneratedNever();
+
             entity.Property(u => u.Name)
                   .HasMaxLength(100)
                   .IsRequired();

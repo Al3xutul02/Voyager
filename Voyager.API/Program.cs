@@ -160,19 +160,24 @@ public class Program
 
         app.Lifetime.ApplicationStarted.Register(async () => {
 
-            // Verify database connection
+            // Apply any pending EF Core migrations on startup. This also acts
+            // as the database connectivity check (Migrate() opens a connection)
+            // and brings the schema up to date with the model automatically.
+            // NOTE: this is convenient for a single-instance bot. For a serious
+            // multi-instance / production deployment we'd apply migrations as a
+            // separate deploy step instead, to avoid two instances migrating at
+            // once.
             using (var scope = app.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<VoyagerDbContext>();
                 try
                 {
-                    dbContext.Database.OpenConnection();
-                    dbContext.Database.CloseConnection();
-                    Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Database connection successful.");
+                    dbContext.Database.Migrate();
+                    Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Database migrated and connection successful.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Database connection failed: {ex.Message}");
+                    Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Database migration failed: {ex.Message}");
                 }
             }
 

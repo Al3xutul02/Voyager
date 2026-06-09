@@ -11,7 +11,7 @@ namespace VoyagerTests.Integration;
 /// <summary>
 /// Repository tests that run against a real MySQL instance (via Testcontainers).
 /// These validate behavior the EF Core in-memory provider can't: the actual
-/// schema from <c>OnModelCreating</c>, Pomelo's LINQ→MySQL translation, ulong
+/// schema from <c>OnModelCreating</c>, Pomelo's LINQ->MySQL translation, ulong
 /// (BIGINT UNSIGNED) key handling, and the <c>text</c> Settings column.
 ///
 /// <para>

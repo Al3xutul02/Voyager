@@ -50,9 +50,8 @@ public static class MySqlContainerFixture
         ConnectionString = _container.GetConnectionString();
         ServerVersion = ServerVersion.AutoDetect(ConnectionString);
 
-        // Build the schema once from the model (no migrations in this project).
         await using var context = CreateContext();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
     }
 
     /// <summary>Stops and disposes the container.</summary>
