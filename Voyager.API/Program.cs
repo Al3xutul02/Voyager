@@ -120,10 +120,19 @@ public class Program
             cfg.AddMaps(typeof(MappingProfile).Assembly);
         });
 
-        builder.Services.AddDbContext<VoyagerDbContext>(options =>
+        // Pool VoyagerDbContext instances rather than allocating one per
+        // request. Same scoped semantics from the caller's perspective;
+        // EF Core resets the change tracker on return-to-pool. Default
+        // pool size is 1024, plenty for a Discord bot.
+        builder.Services.AddDbContextPool<VoyagerDbContext>(options =>
             options.UseMySql(builder.Configuration.GetConnectionString("VoyagerDbDevConnection"),
                              ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("VoyagerDbDevConnection"))));
-        builder.Services.AddScoped<DbContext, VoyagerDbContext>();
+
+        // Redirect DbContext (the base type used by BaseRepository) to the
+        // SAME pooled VoyagerDbContext instance within the scope. Without
+        // this, resolving DbContext would create a fresh non-pooled
+        // VoyagerDbContext and bypass the pool entirely.
+        builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<VoyagerDbContext>());
 
         // Business logic services
         builder.Services.AddScoped<IEnumSerivce, EnumService>();
