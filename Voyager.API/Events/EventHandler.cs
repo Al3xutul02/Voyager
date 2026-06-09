@@ -100,7 +100,7 @@ public static partial class EventHandler
         var customId = args.Interaction.Data.CustomId;
         await using var scope = _scopeFactory!.CreateAsyncScope();
 
-        // Parse the custom_id → InteractionIdType. IEnumSerivce is scoped,
+        // Parse the custom_id → InteractionIdType. IEnumService is scoped,
         // so we open a short-lived scope just for the lookup.
         InteractionIdType type;
         try

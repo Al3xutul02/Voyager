@@ -21,7 +21,7 @@ public class ViewFactory(
     ServerSettings settings)
 {
     private readonly ServerSettings _settings = settings;
-    private readonly IEnumService _enumSerivce = enumService;
+    private readonly IEnumService _enumService = enumService;
 
     /// <summary>
     /// Builds a notification message: a colored embed plus a "Clear"
@@ -32,8 +32,8 @@ public class ViewFactory(
     public DiscordMessageBuilder CreateNotification(NotificationType notificationType, string message)
     {
         return new DiscordMessageBuilder()
-            .AddEmbed(Embeds.Notification(_enumSerivce, _settings, notificationType, message))
-            .AddComponents(Buttons.ClearMessage(_enumSerivce, "Clear this notification"));
+            .AddEmbed(Embeds.Notification(_enumService, _settings, notificationType, message))
+            .AddComponents(Buttons.ClearMessage(_enumService, "Clear this notification"));
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public class ViewFactory(
     public DiscordMessageBuilder CreateUserProfile(UserReadDto userDto)
     {
         return new DiscordMessageBuilder()
-            .AddEmbed(Embeds.UserProfile(_enumSerivce, userDto))
-            .AddComponents(Buttons.ClearMessage(_enumSerivce, "Clear"));
+            .AddEmbed(Embeds.UserProfile(_enumService, userDto))
+            .AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
     }
 }
