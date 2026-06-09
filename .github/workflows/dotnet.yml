@@ -1,0 +1,55 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+# Cancel an in-progress run if a newer commit is pushed to the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests
+        run: >
+          dotnet test --no-build --configuration Release
+          --filter "TestCategory!=Integration"
+          --logger "trx;LogFileName=unit.trx"
+
+      # Integration tests spin up a real MySQL container via Testcontainers.
+      # ubuntu-latest runners ship with Docker, so this works out of the box;
+      # the first run pulls the mysql:8.4 image (adds ~1 min). Delete this step
+      # if you prefer faster CI with unit coverage only.
+      - name: Integration tests
+        run: >
+          dotnet test --no-build --configuration Release
+          --filter "TestCategory=Integration"
+          --logger "trx;LogFileName=integration.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
