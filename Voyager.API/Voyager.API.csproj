@@ -27,9 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Views\Components\Buttons\" />
     <Folder Include="Views\Components\Dropdowns\" />
-    <Folder Include="Views\Components\Embeds\" />
   </ItemGroup>
 
 </Project>

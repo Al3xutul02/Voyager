@@ -1,6 +1,8 @@
+using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+using Voyager.API.Views;
 
 namespace Voyager.API.Commands;
 
@@ -26,16 +28,14 @@ public class Profile(IServiceScopeFactory scopeFactory) : ApplicationCommandModu
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         (var mediaService, var userService) = GetScopeServices(scope);
+        var viewFactory = new ViewFactory(mediaService, new ServerSettings());
 
         var user = await userService.GetByIdAsync(ctx.User.Id);
         if (user == null)
         {
-            await ctx.EditResponseAsync(new DiscordWebhookBuilder(new DiscordMessageBuilder()
-            .AddEmbed(new DiscordEmbedBuilder
-            {
-                Title = $"Error: User not found.",
-                Color = DiscordColor.Red
-            })));
+            await ctx.EditResponseAsync(new DiscordWebhookBuilder(viewFactory.CreateNotification(
+                Enums.Types.NotificationType.Error,
+                $"Error: User not found.")));
 
             return;
         }

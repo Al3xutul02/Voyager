@@ -17,6 +17,8 @@ namespace Voyager.API;
 
 public class Program
 {
+    public static DiscordClient DiscordClient { get; set; }
+
     public static readonly JsonSerializerSettings DefaultJsonSettings = new()
     {
         Formatting = Formatting.Indented,
@@ -42,7 +44,7 @@ public class Program
         {
             var token = builder.Configuration.GetValue<string>("Discord:Token");
 
-            var discordClient = new DiscordClient(new DiscordConfiguration
+            DiscordClient = new DiscordClient(new DiscordConfiguration
             {
                 Token = token,
                 TokenType = TokenType.Bot,
@@ -55,20 +57,20 @@ public class Program
                 AutoReconnect = true
             });
 
-            discordClient.UseInteractivity(new InteractivityConfiguration
+            DiscordClient.UseInteractivity(new InteractivityConfiguration
             {
                 Timeout = TimeSpan.FromMinutes(2)
             });
 
             // Setup event subscriptions
-            discordClient.Ready += Events.EventHandler.OnReady;
-            discordClient.GuildCreated += Events.EventHandler.GuildCreated;
-            discordClient.GuildDeleted += Events.EventHandler.GuildDeleted;
-            discordClient.GuildMemberAdded += Events.EventHandler.GuildMemberAdded;
-            discordClient.GuildMemberRemoved += Events.EventHandler.GuildMemberRemoved;
-            discordClient.ComponentInteractionCreated += Events.EventHandler.ComponentInteractionCreated;
+            DiscordClient.Ready += Events.EventHandler.OnReady;
+            DiscordClient.GuildCreated += Events.EventHandler.GuildCreated;
+            DiscordClient.GuildDeleted += Events.EventHandler.GuildDeleted;
+            DiscordClient.GuildMemberAdded += Events.EventHandler.GuildMemberAdded;
+            DiscordClient.GuildMemberRemoved += Events.EventHandler.GuildMemberRemoved;
+            DiscordClient.ComponentInteractionCreated += Events.EventHandler.ComponentInteractionCreated;
 
-            var slashCommandsConfig = discordClient.UseSlashCommands(new SlashCommandsConfiguration
+            var slashCommandsConfig = DiscordClient.UseSlashCommands(new SlashCommandsConfiguration
             {
                 Services = provider
             });
@@ -80,18 +82,18 @@ public class Program
                 return Task.CompletedTask;
             };
 
-            discordClient.ClientErrored += (s, e) =>
+            DiscordClient.ClientErrored += (s, e) =>
             {
                 Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Discord client error in '{e.EventName}': {e.Exception}");
                 return Task.CompletedTask;
             };
 
-            discordClient.Ready += (s, e) => {
+            DiscordClient.Ready += (s, e) => {
                 Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Discord client is ready! Bot is connected.");
                 return Task.CompletedTask;
             };
 
-            return discordClient;
+            return DiscordClient;
         });
 
         // Add services
