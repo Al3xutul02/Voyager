@@ -17,11 +17,11 @@ namespace Voyager.API.Views;
 /// <param name="enumService">Used by every view that needs color or interaction-id conversion.</param>
 /// <param name="settings">Server-wide UI defaults (colors for notifications, etc.).</param>
 public class ViewFactory(
-    IEnumSerivce enumService,
+    IEnumService enumService,
     ServerSettings settings)
 {
     private readonly ServerSettings _settings = settings;
-    private readonly IEnumSerivce _enumSerivce = enumService;
+    private readonly IEnumService _enumSerivce = enumService;
 
     /// <summary>
     /// Builds a notification message: a colored embed plus a "Clear"

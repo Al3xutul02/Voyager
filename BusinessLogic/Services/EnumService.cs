@@ -6,11 +6,11 @@ using System.Collections.Frozen;
 namespace BusinessLogic.Services;
 
 /// <summary>
-/// Implementation of <see cref="IEnumSerivce"/>. All lookups are backed by
+/// Implementation of <see cref="IEnumService"/>. All lookups are backed by
 /// <see cref="FrozenDictionary{TKey, TValue}"/> instances built at type-init,
 /// so conversions are allocation-free and constant-time at call sites.
 /// </summary>
-public class EnumService : IEnumSerivce
+public class EnumService : IEnumService
 {
     /// <summary>
     /// Forward palette: the only place colors are registered. To add a new

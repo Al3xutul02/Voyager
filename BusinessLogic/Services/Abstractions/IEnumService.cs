@@ -8,7 +8,7 @@ namespace BusinessLogic.Services.Abstractions;
 /// (<see cref="Color"/>, <see cref="InteractionIdType"/>) and their
 /// external representations (DSharpPlus colors, component custom_id strings).
 /// </summary>
-public interface IEnumSerivce
+public interface IEnumService
 {
     /// <summary>
     /// Map a DSharpPlus <see cref="DiscordColor"/> to the matching palette entry.

@@ -29,7 +29,7 @@ public class Profile(IServiceScopeFactory scopeFactory) : ApplicationCommandModu
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-        var enumService = scope.ServiceProvider.GetRequiredService<IEnumSerivce>();
+        var enumService = scope.ServiceProvider.GetRequiredService<IEnumService>();
 
         // The command stays a thin adapter: it only translates the Discord
         // interaction into primitives and hands off to ProfileHandler, which

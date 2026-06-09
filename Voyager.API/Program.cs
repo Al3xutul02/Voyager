@@ -135,7 +135,7 @@ public class Program
         builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<VoyagerDbContext>());
 
         // Business logic services
-        builder.Services.AddScoped<IEnumSerivce, EnumService>();
+        builder.Services.AddScoped<IEnumService, EnumService>();
         builder.Services.AddScoped<IUserService, UserService>();
 
         // Repositories

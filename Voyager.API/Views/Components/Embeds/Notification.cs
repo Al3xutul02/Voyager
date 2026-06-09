@@ -18,7 +18,7 @@ public static partial class Embeds
     /// <param name="message">The text rendered as the embed title.</param>
     /// <exception cref="ArgumentException">Thrown for any unrecognized <paramref name="notificationType"/>.</exception>
     public static DiscordEmbedBuilder Notification(
-        IEnumSerivce enumService, ServerSettings settings, NotificationType notificationType, string message)
+        IEnumService enumService, ServerSettings settings, NotificationType notificationType, string message)
     {
         return notificationType switch
         {

@@ -27,7 +27,7 @@ public static partial class Buttons
     /// </summary>
     /// <param name="enumSerivce">Used to render the interaction id as its custom_id string.</param>
     /// <param name="label">Label rendered on the button face.</param>
-    public static DiscordButtonComponent ClearMessage(IEnumSerivce enumSerivce, string label)
+    public static DiscordButtonComponent ClearMessage(IEnumService enumSerivce, string label)
     {
         return new DiscordButtonComponent(
             ButtonStyle.Secondary,

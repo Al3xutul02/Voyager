@@ -21,7 +21,7 @@ public static partial class Embeds
     /// <param name="enumService">Used to translate the stored palette color to a <see cref="DiscordColor"/>.</param>
     /// <param name="userDto">The user whose profile is being rendered.</param>
     public static DiscordEmbedBuilder UserProfile(
-        IEnumSerivce enumService, UserReadDto userDto)
+        IEnumService enumService, UserReadDto userDto)
     {
         // Construct game list
         string gameList = "_No Current Games_";

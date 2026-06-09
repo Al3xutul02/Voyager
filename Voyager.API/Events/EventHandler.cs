@@ -16,7 +16,7 @@ public static partial class EventHandler
 {
     /// <summary>
     /// Captured once at startup so the static event handlers can open DI
-    /// scopes to resolve scoped services (e.g. <see cref="IEnumSerivce"/>).
+    /// scopes to resolve scoped services (e.g. <see cref="IEnumService"/>).
     /// Call <see cref="Initialize"/> from Program.cs after the app is built.
     /// </summary>
     private static IServiceScopeFactory? _scopeFactory;
@@ -105,7 +105,7 @@ public static partial class EventHandler
         InteractionIdType type;
         try
         {
-            var enumService = scope.ServiceProvider.GetRequiredService<IEnumSerivce>();
+            var enumService = scope.ServiceProvider.GetRequiredService<IEnumService>();
             type = enumService.ConvertInteraction(customId);
         }
         catch (Exception ex)
