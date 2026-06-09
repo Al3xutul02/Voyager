@@ -20,6 +20,7 @@ public abstract class BaseRepository<T>(DbContext context, string keyName)
     // Type cache for better performance
     protected static readonly IQueryable<PropertyInfo> _entityProperties = typeof(T).GetProperties().AsQueryable();
 
+    /// <inheritdoc />
     public virtual async Task<T?> GetByIdAsync(ulong id, IncludeBehavior behavior, Func<IQueryable<T>, IQueryable<T>>? includes = null)
     {
         IQueryable<T> query = new QueryBuilder<T>(_dbSet)
@@ -30,6 +31,7 @@ public abstract class BaseRepository<T>(DbContext context, string keyName)
         return await query.FirstOrDefaultAsync(e => EF.Property<ulong>(e, _keyName) == id);
     }
 
+    /// <inheritdoc />
     public virtual async Task<IEnumerable<T>> GetAllAsync(IncludeBehavior behavior, Func<IQueryable<T>, IQueryable<T>>? includes = null)
     {
         IQueryable<T> query = new QueryBuilder<T>(_dbSet)
@@ -38,11 +40,16 @@ public abstract class BaseRepository<T>(DbContext context, string keyName)
             .Build();
         return await query.ToListAsync();
     }
+
+    /// <inheritdoc />
     public virtual async Task AddAsync(T entity) => await _dbSet.AddAsync(entity);
 
+    /// <inheritdoc />
     public virtual void Update(T entity) => _dbSet.Update(entity);
 
+    /// <inheritdoc />
     public virtual void Delete(T entity) => _dbSet.Remove(entity);
 
+    /// <inheritdoc />
     public virtual async Task SaveAsync() => await _context.SaveChangesAsync();
 }

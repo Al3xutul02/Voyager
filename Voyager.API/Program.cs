@@ -6,8 +6,6 @@ using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Repository.Context;
 using Repository.Repositories;
 using Repository.Repositories.Abstractions;
@@ -15,27 +13,38 @@ using System.Reflection;
 
 namespace Voyager.API;
 
+/// <summary>
+/// Application entry point and composition root. Wires up DI, configures
+/// the Discord client and slash commands, and starts the ASP.NET Core host.
+/// </summary>
 public class Program
 {
-    public static DiscordClient DiscordClient { get; set; }
+    /// <summary>
+    /// Convenience singleton handle to the bot's <see cref="DiscordClient"/>
+    /// so static factories (e.g. <c>Buttons.ClearMessage</c> needing
+    /// <c>DiscordEmoji.FromName</c>) don't have to take it as a parameter.
+    /// Assigned inside the AddSingleton factory below; reads always happen
+    /// after the singleton has been resolved at startup, so the
+    /// null-forgiving initializer is safe in practice.
+    /// </summary>
+    public static DiscordClient DiscordClient { get; set; } = null!;
 
-    public static readonly JsonSerializerSettings DefaultJsonSettings = new()
-    {
-        Formatting = Formatting.Indented,
-        NullValueHandling = NullValueHandling.Include,
-        DefaultValueHandling = DefaultValueHandling.Populate,
-        DateFormatHandling = DateFormatHandling.IsoDateFormat,
-        ReferenceLoopHandling = ReferenceLoopHandling.Error,
-        ContractResolver = new CamelCasePropertyNamesContractResolver()
-    };
-
+    /// <summary>
+    /// Process entry point. Configures the WebApplication builder, registers
+    /// every service (Discord client, AutoMapper, EF Core, business
+    /// services), wires up event handlers and slash commands, then runs the
+    /// host until shutdown.
+    /// </summary>
     public static async Task Main(string[] args)
     {
-        // Configure Newtonsoft library settings
-        JsonConvert.DefaultSettings = () =>
-        {
-            return new JsonSerializerSettings(DefaultJsonSettings);
-        };
+        // NOTE: do not set JsonConvert.DefaultSettings here. DSharpPlus
+        // uses Newtonsoft internally and has its own [JsonProperty] attributes
+        // on its DTOs. A global ContractResolver (e.g. CamelCasePropertyNames)
+        // will collide with those attributes — e.g. it throws
+        // "A member with the name 'components' already exists on
+        // DiscordActionRowComponent" the first time a component is serialized.
+        // If you need custom JSON settings for your own types, pass them
+        // explicitly to JsonConvert.Serialize/DeserializeObject.
 
         var builder = WebApplication.CreateBuilder(args);
         
@@ -117,13 +126,17 @@ public class Program
         builder.Services.AddScoped<DbContext, VoyagerDbContext>();
 
         // Business logic services
-        builder.Services.AddScoped<IMediaSerivce, MediaService>();
+        builder.Services.AddScoped<IEnumSerivce, EnumService>();
         builder.Services.AddScoped<IUserService, UserService>();
 
         // Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
 
         var app = builder.Build();
+
+        // Give the static EventHandler access to the DI container so it can
+        // open scopes when component interactions fire.
+        Events.EventHandler.Initialize(app.Services.GetRequiredService<IServiceScopeFactory>());
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())

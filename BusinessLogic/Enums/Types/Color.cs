@@ -3,6 +3,12 @@ using Newtonsoft.Json.Converters;
 
 namespace BusinessLogic.Enums.Types;
 
+/// <summary>
+/// Bot-wide named color palette. Each value corresponds 1:1 to a DSharpPlus
+/// <see cref="DSharpPlus.Entities.DiscordColor"/> via <c>EnumService.Palette</c>.
+/// Serialized as its string name (e.g. <c>"Gray"</c>) so JSON columns stay
+/// human-readable.
+/// </summary>
 [JsonConverter(typeof(StringEnumConverter))]
 public enum Color
 {

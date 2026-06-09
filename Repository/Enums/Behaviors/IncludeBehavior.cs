@@ -20,5 +20,4 @@ public enum IncludeBehavior
     /// Use the query given in the parameters
     /// </summary>
     GivenIncludes,
-    NoIncludes
 }

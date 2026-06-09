@@ -2,6 +2,7 @@ using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+using Voyager.API.Enums.Types;
 using Voyager.API.Views;
 
 namespace Voyager.API.Commands;
@@ -27,28 +28,23 @@ public class Profile(IServiceScopeFactory scopeFactory) : ApplicationCommandModu
         await ctx.DeferAsync();
 
         await using var scope = _scopeFactory.CreateAsyncScope();
-        (var mediaService, var userService) = GetScopeServices(scope);
-        var viewFactory = new ViewFactory(mediaService, new ServerSettings());
+        (var enumService, var userService) = GetScopeServices(scope);
+        var viewFactory = new ViewFactory(enumService, new ServerSettings());
 
         var user = await userService.GetByIdAsync(ctx.User.Id);
         if (user == null)
         {
             await ctx.EditResponseAsync(new DiscordWebhookBuilder(viewFactory.CreateNotification(
-                Enums.Types.NotificationType.Error,
+                NotificationType.Error,
                 $"Error: User not found.")));
 
             return;
         }
 
-        await ctx.EditResponseAsync(new DiscordWebhookBuilder(new DiscordMessageBuilder()
-            .AddEmbed(new DiscordEmbedBuilder
-            {
-                Title = $"{user.Name}'s Profile",
-                Color = mediaService.ConvertColor(user.Settings.Color)
-            })));
+        await ctx.EditResponseAsync(new DiscordWebhookBuilder(viewFactory.CreateUserProfile(user)));
     }
 
-    private static (IMediaSerivce, IUserService) GetScopeServices(AsyncServiceScope scope) =>
-        (scope.ServiceProvider.GetRequiredService<IMediaSerivce>(),
+    private static (IEnumSerivce, IUserService) GetScopeServices(AsyncServiceScope scope) =>
+        (scope.ServiceProvider.GetRequiredService<IEnumSerivce>(),
          scope.ServiceProvider.GetRequiredService<IUserService>());
 }
