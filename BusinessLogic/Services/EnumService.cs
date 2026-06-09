@@ -5,7 +5,12 @@ using System.Collections.Frozen;
 
 namespace BusinessLogic.Services;
 
-public class MediaService : IMediaSerivce
+/// <summary>
+/// Implementation of <see cref="IEnumService"/>. All lookups are backed by
+/// <see cref="FrozenDictionary{TKey, TValue}"/> instances built at type-init,
+/// so conversions are allocation-free and constant-time at call sites.
+/// </summary>
+public class EnumService : IEnumService
 {
     /// <summary>
     /// Forward palette: the only place colors are registered. To add a new
@@ -64,12 +69,32 @@ public class MediaService : IMediaSerivce
     /// <see cref="DiscordColor.Value"/> (the underlying RGB int) so equality
     /// doesn't depend on DiscordColor's struct equality contract.
     /// </summary>
-    private static readonly FrozenDictionary<int, Color> ReverseLookup =
+    private static readonly FrozenDictionary<int, Color> ReversePalette =
         Palette.ToFrozenDictionary(kv => kv.Value.Value, kv => kv.Key);
 
+    private static readonly FrozenDictionary<InteractionIdType, string> InteractionMap =
+        new Dictionary<InteractionIdType, string>
+        {
+            [InteractionIdType.None]       = "none", 
+            [InteractionIdType.ClearAlert] = "clearAlert"
+        }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<string, InteractionIdType> ReverseInteractionMap =
+        InteractionMap.ToFrozenDictionary(kv => kv.Value, kv => kv.Key);
+
+    /// <inheritdoc />
+    public Color ConvertColor(DiscordColor color) =>
+        ReversePalette.TryGetValue(color.Value, out var paletteColor) ? paletteColor : Color.Teal;
+
+    /// <inheritdoc />
     public DiscordColor ConvertColor(Color color) =>
         Palette.TryGetValue(color, out var discordColor) ? discordColor : DiscordColor.Teal;
 
-    public Color ConvertColor(DiscordColor color) =>
-        ReverseLookup.TryGetValue(color.Value, out var paletteColor) ? paletteColor : Color.Teal;
+    /// <inheritdoc />
+    public InteractionIdType ConvertInteraction(string interactionId) =>
+        ReverseInteractionMap.TryGetValue(interactionId, out var interactionType) ? interactionType : InteractionIdType.None;
+
+    /// <inheritdoc />
+    public string ConvertInteraction(InteractionIdType interactionType) =>
+        InteractionMap.TryGetValue(interactionType, out var interactionId) ? interactionId : "none";
 }

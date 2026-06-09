@@ -9,6 +9,9 @@ namespace Repository.Context;
 /// <param name="options">The DbContext options to use for voyager.</param>
 public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbContext(options)
 {
+    /// <summary>
+    /// All users known to the bot. Mapped to the <c>users</c> table.
+    /// </summary>
     public DbSet<User> Users { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -16,6 +19,9 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
         modelBuilder.Entity<User>(entity => {
             entity.ToTable("users");
             entity.HasKey(u => u.Id);
+
+            entity.Property(u => u.Id)
+                  .ValueGeneratedNever();
 
             entity.Property(u => u.Name)
                   .HasMaxLength(100)

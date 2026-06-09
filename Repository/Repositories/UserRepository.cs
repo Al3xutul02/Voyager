@@ -13,6 +13,7 @@ namespace Repository.Repositories;
 /// <param name="context">The database context to use.</param>
 public class UserRepository(DbContext context) : BaseRepository<User>(context, "Id"), IUserRepository
 {
+    /// <inheritdoc />
     public async Task<User?> GetByNameAsync(string name, IncludeBehavior behavior, Func<IQueryable<User>, IQueryable<User>>? includes = null)
     {
         IQueryable<User> query = new QueryBuilder<User>(_dbSet)

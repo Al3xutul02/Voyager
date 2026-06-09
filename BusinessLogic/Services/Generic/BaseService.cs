@@ -24,19 +24,21 @@ public abstract class BaseService<T, TReadDto, TCreateDto, TUpdateDto>(
     protected readonly IMapper _mapper = mapper;
     protected readonly IBaseRepository<T> _repository = repository;
 
+    /// <inheritdoc />
     public virtual async Task<TReadDto?> GetByIdAsync(ulong id)
     {
         var entity = await _repository.GetByIdAsync(id, IncludeBehavior.NoInclude);
-        return entity != null ? _mapper.Map<TReadDto>(entity)
-            : throw new ArgumentException($"{typeof(T).Name} with id {id} not found");
+        return entity != null ? _mapper.Map<TReadDto>(entity) : null;
     }
 
+    /// <inheritdoc />
     public virtual async Task<IEnumerable<TReadDto>> GetAllAsync()
     {
         IEnumerable<T> entities = await _repository.GetAllAsync(IncludeBehavior.NoInclude);
         return _mapper.Map<IEnumerable<TReadDto>>(entities);
     }
 
+    /// <inheritdoc />
     public virtual async Task CreateAsync(TCreateDto entityCreateDto)
     {
         var entity = _mapper.Map<T>(entityCreateDto);
@@ -44,6 +46,7 @@ public abstract class BaseService<T, TReadDto, TCreateDto, TUpdateDto>(
         await _repository.SaveAsync();
     }
 
+    /// <inheritdoc />
     public virtual async Task UpdateAsync(TUpdateDto dto)
     {
 
@@ -52,6 +55,7 @@ public abstract class BaseService<T, TReadDto, TCreateDto, TUpdateDto>(
         await _repository.SaveAsync();
     }
 
+    /// <inheritdoc />
     public virtual async Task DeleteAsync(ulong id)
     {
         var entity = await _repository.GetByIdAsync(id, IncludeBehavior.NoInclude)

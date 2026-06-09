@@ -1,5 +1,6 @@
 using AutoMapper;
 using BusinessLogic.Dtos.User;
+using BusinessLogic.Json;
 using BusinessLogic.Json.Models;
 using Newtonsoft.Json;
 using Repository.Models;
@@ -19,17 +20,20 @@ public class MappingProfile : Profile
         // init-only and populated through the constructor. AutoMapper's
         // .ForMember(...) is silently ignored for positional record ctor
         // parameters — use .ForCtorParam(...) instead.
+        // We pass VoyagerJsonSettings.Default explicitly to every JsonConvert
+        // call so the camelCase resolver only affects JSON we own — never
+        // DSharpPlus's internal serialization.
 
         CreateMap<UserCreateDto, User>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(new UserSettings())));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(new UserSettings(), VoyagerJsonSettings.Default)));
 
         CreateMap<User, UserReadDto>()
             .ForCtorParam(nameof(UserReadDto.Settings),
-                opt => opt.MapFrom(src => JsonConvert.DeserializeObject<UserSettings>(src.Settings)));
+                opt => opt.MapFrom(src => JsonConvert.DeserializeObject<UserSettings>(src.Settings, VoyagerJsonSettings.Default)));
 
         CreateMap<UserUpdateDto, User>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings)));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
     }
 }
