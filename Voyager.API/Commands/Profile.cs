@@ -2,7 +2,7 @@ using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using Voyager.API.Enums.Types;
+using Voyager.API.Commands.Handlers;
 using Voyager.API.Views;
 
 namespace Voyager.API.Commands;
@@ -12,9 +12,9 @@ namespace Voyager.API.Commands;
 /// </summary>
 /// <param name="scopeFactory">
 /// Factory used to create a DI scope per interaction. We can't inject scoped
-/// services (like <see cref="IUserService"/>) directly because DSharpPlus
-/// instantiates command modules from the root provider, which fails scope
-/// validation. Instead we resolve scoped services inside each command method.
+/// services directly because DSharpPlus instantiates command modules from the
+/// root provider, which fails scope validation. Instead we resolve scoped
+/// services inside each command method.
 /// </param>
 [SlashCommandGroup("profile", "Commands regarding discord users")]
 public class Profile(IServiceScopeFactory scopeFactory) : ApplicationCommandModule
@@ -28,23 +28,16 @@ public class Profile(IServiceScopeFactory scopeFactory) : ApplicationCommandModu
         await ctx.DeferAsync();
 
         await using var scope = _scopeFactory.CreateAsyncScope();
-        (var enumService, var userService) = GetScopeServices(scope);
+        var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+        var enumService = scope.ServiceProvider.GetRequiredService<IEnumSerivce>();
+
+        // The command stays a thin adapter: it only translates the Discord
+        // interaction into primitives and hands off to ProfileHandler, which
+        // holds the testable logic.
         var viewFactory = new ViewFactory(enumService, new ServerSettings());
+        var handler = new ProfileHandler(userService, viewFactory);
 
-        var user = await userService.GetByIdAsync(ctx.User.Id);
-        if (user == null)
-        {
-            await ctx.EditResponseAsync(new DiscordWebhookBuilder(viewFactory.CreateNotification(
-                NotificationType.Error,
-                $"Error: User not found.")));
-
-            return;
-        }
-
-        await ctx.EditResponseAsync(new DiscordWebhookBuilder(viewFactory.CreateUserProfile(user)));
+        var message = await handler.BuildProfileViewAsync(ctx.User.Id);
+        await ctx.EditResponseAsync(new DiscordWebhookBuilder(message));
     }
-
-    private static (IEnumSerivce, IUserService) GetScopeServices(AsyncServiceScope scope) =>
-        (scope.ServiceProvider.GetRequiredService<IEnumSerivce>(),
-         scope.ServiceProvider.GetRequiredService<IUserService>());
 }

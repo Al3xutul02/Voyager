@@ -12,6 +12,14 @@ namespace Voyager.API.Views.Components.Buttons;
 public static partial class Buttons
 {
     /// <summary>
+    /// The cross-mark emoji shown on the clear button. Built from the raw
+    /// unicode code point so no <see cref="DiscordClient"/> is required —
+    /// this keeps the button (and the views that use it) constructible in
+    /// unit tests.
+    /// </summary>
+    private static readonly DiscordComponentEmoji ClearEmoji = new("❌"); // ❌
+
+    /// <summary>
     /// Builds a secondary "clear" button whose <c>custom_id</c> matches
     /// <see cref="InteractionIdType.ClearAlert"/>. Clicking it triggers the
     /// <c>ClearAlert</c> handler in <c>EventHandler</c>, which deletes the
@@ -26,6 +34,6 @@ public static partial class Buttons
             enumSerivce.ConvertInteraction(InteractionIdType.ClearAlert),
             label,
             false,
-            new DiscordComponentEmoji(DiscordEmoji.FromName(Program.DiscordClient, ":x:")));
+            ClearEmoji);
     }
 }

@@ -28,8 +28,7 @@ public abstract class BaseService<T, TReadDto, TCreateDto, TUpdateDto>(
     public virtual async Task<TReadDto?> GetByIdAsync(ulong id)
     {
         var entity = await _repository.GetByIdAsync(id, IncludeBehavior.NoInclude);
-        return entity != null ? _mapper.Map<TReadDto>(entity)
-            : throw new ArgumentException($"{typeof(T).Name} with id {id} not found");
+        return entity != null ? _mapper.Map<TReadDto>(entity) : null;
     }
 
     /// <inheritdoc />
