@@ -6,10 +6,16 @@ avoid re-introducing bugs we've already fixed.
 
 ## What this is
 
-Voyager is a **Discord bot** built on **DSharpPlus**, hosted inside an
+Voyager is a **Discord bot** built on **DSharpPlus** specifically designed for **Pathfinder 2E Play by Post (PbP)**. It is hosted inside an
 **ASP.NET Core Web API** (the API also exposes a few HTTP endpoints + Swagger).
 It persists user data to **MySQL** via **EF Core (Pomelo provider)**. Solo hobby
 project; single-instance deployment.
+
+## Domain & Server Modes
+
+The bot's behavior, channel structures, and permission systems are strictly driven by the server's operating mode:
+- **Normal Mode**: Supports multiple concurrent games on the same Discord server. Games are kept separated and isolated from one another via privacy settings and category/role structures.
+- **Westmarch Mode**: A shared-world server environment (e.g., featuring shared mission boards and interconnected channels).
 
 ## Solution layout
 
