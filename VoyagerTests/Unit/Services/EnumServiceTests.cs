@@ -76,12 +76,41 @@ public class EnumServiceTests
         }
     }
 
+    // ---- Color: string -> enum ------------------------------------------
+
+    [TestMethod]
+    public void ConvertColor_FromString_IsCaseInsensitiveAndReturnsMatchingColor()
+    {
+        Assert.AreEqual(Color.Blurple, _sut.ConvertColor("Blurple"));
+        Assert.AreEqual(Color.Blurple, _sut.ConvertColor("blurple"));
+        Assert.AreEqual(Color.CornflowerBlue, _sut.ConvertColor("  CORNFLOWERBLUE "));
+    }
+
+    [TestMethod]
+    public void ConvertColor_FromUnknownOrEmptyString_FallsBackToTeal()
+    {
+        Assert.AreEqual(Color.Teal, _sut.ConvertColor("NotAColor"));
+        Assert.AreEqual(Color.Teal, _sut.ConvertColor(string.Empty));
+        Assert.AreEqual(Color.Teal, _sut.ConvertColor("   "));
+    }
+
+    [TestMethod]
+    public void ConvertColor_FromString_RoundTripsForEveryEnumName()
+    {
+        foreach (Color color in Enum.GetValues<Color>())
+        {
+            Color parsed = _sut.ConvertColor(color.ToString());
+            Assert.AreEqual(color, parsed, $"String conversion failed for Color.{color}.");
+        }
+    }
+
     // ---- Interaction id <-> string --------------------------------------
 
     [TestMethod]
     public void ConvertInteraction_KnownType_ReturnsRegisteredString()
     {
         Assert.AreEqual("clearAlert", _sut.ConvertInteraction(InteractionIdType.ClearAlert));
+        Assert.AreEqual("switchProfilePage", _sut.ConvertInteraction(InteractionIdType.SwitchProfilePage));
         Assert.AreEqual("none", _sut.ConvertInteraction(InteractionIdType.None));
     }
 
@@ -89,6 +118,7 @@ public class EnumServiceTests
     public void ConvertInteraction_KnownString_ReturnsType()
     {
         Assert.AreEqual(InteractionIdType.ClearAlert, _sut.ConvertInteraction("clearAlert"));
+        Assert.AreEqual(InteractionIdType.SwitchProfilePage, _sut.ConvertInteraction("switchProfilePage"));
     }
 
     [TestMethod]

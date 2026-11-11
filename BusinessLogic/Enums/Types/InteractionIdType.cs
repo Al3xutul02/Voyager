@@ -19,5 +19,11 @@ public enum InteractionIdType
     /// Dismiss-button on transient notifications/alerts — the handler
     /// deletes the message the button is attached to.
     /// </summary>
-    ClearAlert
+    ClearAlert,
+
+    /// <summary>
+    /// Select-menu on a user's own profile card that switches the displayed
+    /// embed between the Profile view and the Settings view.
+    /// </summary>
+    SwitchProfilePage
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Repository.Builders;
 using Repository.Enums.Behaviors;
 using System.Linq.Expressions;
@@ -50,7 +50,28 @@ public abstract class BaseRepository<KeyType, T>(DbContext context, params strin
     public virtual async Task AddAsync(T entity) => await _dbSet.AddAsync(entity);
 
     /// <inheritdoc />
-    public virtual void Update(T entity) => _dbSet.Update(entity);
+    public virtual void Update(T entity)
+    {
+        // If an entity with the same primary key is already tracked in this
+        // DbContext scope (e.g. from a prior GetByIdAsync), detach it first
+        // so attaching a newly mapped update entity doesn't throw a duplicate
+        // key tracking exception.
+        var entry = _context.Entry(entity);
+        var keyValues = _keyNames.Select(k => entry.Property(k).CurrentValue).ToArray();
+        var tracked = _dbSet.Local.FirstOrDefault(local =>
+        {
+            var localEntry = _context.Entry(local);
+            return _keyNames.Select(k => localEntry.Property(k).CurrentValue)
+                            .SequenceEqual(keyValues);
+        });
+
+        if (tracked is not null && !ReferenceEquals(tracked, entity))
+        {
+            _context.Entry(tracked).State = EntityState.Detached;
+        }
+
+        _dbSet.Update(entity);
+    }
 
     /// <inheritdoc />
     public virtual void Delete(T entity) => _dbSet.Remove(entity);

@@ -32,7 +32,8 @@ public class MappingProfileTests
     {
         // Arrange: a User row whose Settings column holds serialized JSON.
         var settingsJson = JsonConvert.SerializeObject(
-            new UserSettings(Color.Red), VoyagerJsonSettings.Default);
+            new UserSettings(Color.Red, PrivacyOption.Private, PrivacyOption.Public),
+            VoyagerJsonSettings.Default);
         var user = new User { Id = 42, Name = "Ada", Settings = settingsJson };
 
         // Act
@@ -43,12 +44,14 @@ public class MappingProfileTests
         Assert.AreEqual(42UL, dto.Id);
         Assert.AreEqual("Ada", dto.Name);
         Assert.AreEqual(Color.Red, dto.Settings.Color);
+        Assert.AreEqual(PrivacyOption.Private, dto.Settings.GamePrivacy);
+        Assert.AreEqual(PrivacyOption.Public, dto.Settings.CharacterPrivacy);
     }
 
     [TestMethod]
     public void Map_UserCreateDtoToUser_SerializesDefaultSettings()
     {
-        var createDto = new UserCreateDto(7, "Grace");
+        var createDto = new UserCreateDto(7, "Grace", new UserSettings());
 
         var user = _mapper.Map<User>(createDto);
 
@@ -56,17 +59,22 @@ public class MappingProfileTests
         Assert.AreEqual("Grace", user.Name);
 
         // Settings should be valid JSON deserializable back into UserSettings
-        // with the default color.
+        // with the default color and privacy options.
         var settings = JsonConvert.DeserializeObject<UserSettings>(
             user.Settings, VoyagerJsonSettings.Default);
         Assert.IsNotNull(settings);
         Assert.AreEqual(new UserSettings().Color, settings!.Color);
+        Assert.AreEqual(PrivacyOption.Public, settings.GamePrivacy);
+        Assert.AreEqual(PrivacyOption.Public, settings.CharacterPrivacy);
     }
 
     [TestMethod]
     public void Map_UserUpdateDtoToUser_SerializesProvidedSettings()
     {
-        var updateDto = new UserUpdateDto(9, "Linus", new UserSettings(Color.Green));
+        var updateDto = new UserUpdateDto(
+            9,
+            "Linus",
+            new UserSettings(Color.Green, PrivacyOption.Private, PrivacyOption.Private));
 
         var user = _mapper.Map<User>(updateDto);
 
@@ -74,6 +82,8 @@ public class MappingProfileTests
             user.Settings, VoyagerJsonSettings.Default);
         Assert.IsNotNull(settings);
         Assert.AreEqual(Color.Green, settings!.Color);
+        Assert.AreEqual(PrivacyOption.Private, settings.GamePrivacy);
+        Assert.AreEqual(PrivacyOption.Private, settings.CharacterPrivacy);
     }
 
     [TestMethod]
