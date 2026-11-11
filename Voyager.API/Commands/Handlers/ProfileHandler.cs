@@ -26,13 +26,14 @@ public class ProfileHandler(IUserService userService, IEnumService enumService, 
     /// if they exist, otherwise an error notification.
     /// </summary>
     /// <param name="user">The Discord user whose profile to show.</param>
-    public async Task<DiscordMessageBuilder> ViewAsync(DiscordUser user)
+    /// <param name="caller">The user who invoked the command.</param>
+    public async Task<DiscordMessageBuilder> ViewAsync(DiscordUser user, DiscordUser caller)
     {
         var result = await _userService.GetByIdAsync(user.Id);
 
         return result is null
             ? _viewFactory.CreateNotification(NotificationType.Error, "Error: User not found.")
-            : _viewFactory.CreateUserProfile(result);
+            : _viewFactory.CreateUserProfile(result, caller);
     }
 
     public async Task<DiscordMessageBuilder> CreateAsync(DiscordUser user, DiscordColor? color)
@@ -57,5 +58,13 @@ public class ProfileHandler(IUserService userService, IEnumService enumService, 
         {
             return _viewFactory.CreateNotification(NotificationType.Error, $"An error occurred while creating the profile.");
         }
+    }
+
+    public async Task<DiscordMessageBuilder> SettingsAsync(DiscordUser user)
+    {
+        var result = await _userService.GetByIdAsync(user.Id);
+        return result is null
+            ? _viewFactory.CreateNotification(NotificationType.Error, "Error: User not found.")
+            : _viewFactory.CreateUserSettings(result);
     }
 }

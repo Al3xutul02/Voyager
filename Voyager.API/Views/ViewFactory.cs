@@ -17,9 +17,11 @@ namespace Voyager.API.Views;
 /// <param name="enumService">Used by every view that needs color or interaction-id conversion.</param>
 /// <param name="settings">Server-wide UI defaults (colors for notifications, etc.).</param>
 public class ViewFactory(
+    bool isEphemeral,
     IEnumService enumService,
     ServerSettings settings)
 {
+    private readonly bool _isEphemeral = isEphemeral;
     private readonly ServerSettings _settings = settings;
     private readonly IEnumService _enumService = enumService;
 
@@ -31,19 +33,38 @@ public class ViewFactory(
     /// <param name="message">Text rendered as the embed title.</param>
     public DiscordMessageBuilder CreateNotification(NotificationType notificationType, string message)
     {
-        return new DiscordMessageBuilder()
-            .AddEmbed(Embeds.Notification(_enumService, _settings, notificationType, message))
-            .AddComponents(Buttons.ClearMessage(_enumService, "Clear this notification"));
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.Notification(_enumService, _settings, notificationType, message));
+
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear this notification"));
+
+        return messageBuilder;
     }
 
     /// <summary>
     /// Builds the user-profile message used by <c>/profile view</c>:
     /// the profile embed plus a "Clear" dismissal button.
     /// </summary>
-    public DiscordMessageBuilder CreateUserProfile(UserReadDto userDto)
+    public DiscordMessageBuilder CreateUserProfile(UserReadDto userDto, DiscordUser caller)
     {
-        return new DiscordMessageBuilder()
-            .AddEmbed(Embeds.UserProfile(_enumService, userDto))
-            .AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.UserProfile(_enumService, userDto, caller));
+
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+
+        return messageBuilder;
+    }
+
+    public DiscordMessageBuilder CreateUserSettings(UserReadDto userDto)
+    {
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.UserSettings(_enumService, userDto));
+
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+
+        return messageBuilder;
     }
 }
