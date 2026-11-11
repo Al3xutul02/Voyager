@@ -7,7 +7,7 @@ namespace Repository.Repositories.Abstractions;
 /// <summary>
 /// User repository implementation for user information from the database
 /// </summary>
-public interface IUserRepository : IBaseRepository<User>
+public interface IUserRepository : IBaseRepository<ulong, User>
 {
     /// <summary>
     /// Read the user with a specific name

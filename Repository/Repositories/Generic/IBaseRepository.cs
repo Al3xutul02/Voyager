@@ -6,7 +6,9 @@ namespace Repository.Repositories.Generic;
 /// General repository implementation that contains basic CRUD operations on the database
 /// </summary>
 /// <typeparam name="T">The class model for the repository</typeparam>
-public interface IBaseRepository<T> where T : class
+public interface IBaseRepository<KeyType, T>
+    where KeyType : notnull
+    where T : class
 {
     /// <summary>
     /// Read the entity with a specific key
@@ -15,7 +17,7 @@ public interface IBaseRepository<T> where T : class
     /// <param name="behavior">Behavior describing what joins the query should include</param>
     /// <param name="includes">Specific includes to be used</param>
     /// <returns>A task with the final result of the query</returns>
-    Task<T?> GetByIdAsync(ulong id, IncludeBehavior behavior, Func<IQueryable<T>, IQueryable<T>>? includes = null);
+    Task<T?> GetByIdAsync(KeyType id, IncludeBehavior behavior, Func<IQueryable<T>, IQueryable<T>>? includes = null);
 
     /// <summary>
     /// Read all entities from the table (WARNING: only use in testing with few entities in a table)
