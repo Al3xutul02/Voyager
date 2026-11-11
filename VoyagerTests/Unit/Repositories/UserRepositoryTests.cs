@@ -141,6 +141,24 @@ public class UserRepositoryTests
         Assert.AreEqual("After", reloaded!.Name);
     }
 
+    [TestMethod]
+    public async Task Update_WithNewEntityInstanceWhenAlreadyTracked_DetachesOldAndModifiesUser()
+    {
+        await using var context = await SeedAsync(MakeUser(1, "Before"));
+        var repo = new UserRepository(context);
+
+        // Simulate GetByIdAsync tracking the original entity in the same scope
+        // before BaseService.UpdateAsync maps a fresh User instance.
+        _ = await repo.GetByIdAsync(1, IncludeBehavior.NoInclude);
+        var mappedUpdate = new User { Id = 1, Name = "UpdatedViaDto", Settings = "{\"color\":\"Red\"}" };
+
+        repo.Update(mappedUpdate);
+        await repo.SaveAsync();
+
+        var reloaded = await repo.GetByIdAsync(1, IncludeBehavior.NoInclude);
+        Assert.AreEqual("UpdatedViaDto", reloaded!.Name);
+    }
+
     // ---- Delete + SaveAsync ---------------------------------------------
 
     [TestMethod]

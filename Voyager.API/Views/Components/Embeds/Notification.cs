@@ -37,7 +37,12 @@ public static partial class Embeds
                 Title = message,
                 Color = enumService.ConvertColor(settings.SuccessColor)
             },
-            _ => throw new ArgumentException("Invalid notification type, only General, Error and Success are supported"),
+            NotificationType.Warning => new DiscordEmbedBuilder
+            {
+                Title = message,
+                Color = enumService.ConvertColor(settings.WarningColor)
+            },
+            _ => throw new ArgumentException("Invalid notification type, only General, Error, Success and Warning are supported"),
         };
     }
 }

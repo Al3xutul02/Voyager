@@ -72,11 +72,19 @@ public class EnumService : IEnumService
     private static readonly FrozenDictionary<int, Color> ReversePalette =
         Palette.ToFrozenDictionary(kv => kv.Value.Value, kv => kv.Key);
 
+    /// <summary>
+    /// Case-insensitive name lookup derived from <see cref="Palette"/> for
+    /// parsing string color inputs (e.g. slash-command autocomplete values).
+    /// </summary>
+    private static readonly FrozenDictionary<string, Color> NamePalette =
+        Palette.Keys.ToFrozenDictionary(c => c.ToString(), c => c, StringComparer.OrdinalIgnoreCase);
+
     private static readonly FrozenDictionary<InteractionIdType, string> InteractionMap =
         new Dictionary<InteractionIdType, string>
         {
-            [InteractionIdType.None]       = "none", 
-            [InteractionIdType.ClearAlert] = "clearAlert"
+            [InteractionIdType.None]              = "none",
+            [InteractionIdType.ClearAlert]        = "clearAlert",
+            [InteractionIdType.SwitchProfilePage] = "switchProfilePage"
         }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, InteractionIdType> ReverseInteractionMap =
@@ -85,6 +93,12 @@ public class EnumService : IEnumService
     /// <inheritdoc />
     public Color ConvertColor(DiscordColor color) =>
         ReversePalette.TryGetValue(color.Value, out var paletteColor) ? paletteColor : Color.Teal;
+
+    /// <inheritdoc />
+    public Color ConvertColor(string color) =>
+        !string.IsNullOrWhiteSpace(color) && NamePalette.TryGetValue(color.Trim(), out var paletteColor)
+            ? paletteColor
+            : Color.Teal;
 
     /// <inheritdoc />
     public DiscordColor ConvertColor(Color color) =>

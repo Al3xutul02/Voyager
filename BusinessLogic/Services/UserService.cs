@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using BusinessLogic.Dtos.User;
-using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
 using BusinessLogic.Services.Generic;
 using Repository.Enums.Behaviors;
@@ -15,7 +14,7 @@ namespace BusinessLogic.Services;
 /// <param name="mapper">The mapper used for mapping operations.</param>
 /// <param name="userRepository">The database context to use.</param>
 public class UserService(IMapper mapper, IUserRepository userRepository)
-    : BaseService<User, UserReadDto, UserCreateDto, UserUpdateDto>(mapper, userRepository), IUserService
+    : BaseService<ulong, User, UserReadDto, UserCreateDto, UserUpdateDto>(mapper, userRepository), IUserService
 {
     private IUserRepository UserRepository => (IUserRepository)_repository;
 

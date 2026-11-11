@@ -1,7 +1,12 @@
 using BusinessLogic.Enums.Types;
+using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using Voyager.API.Commands.Handlers;
+using Voyager.API.Enums.Types;
+using Voyager.API.Views;
 
 namespace Voyager.API.Events;
 
@@ -33,7 +38,8 @@ public static partial class EventHandler
         {
             [InteractionIdType.None] = (sender, args, services) =>
                 throw new ArgumentException("Interaction id does not exist"),
-            [InteractionIdType.ClearAlert] = ClearAlert
+            [InteractionIdType.ClearAlert] = ClearAlert,
+            [InteractionIdType.SwitchProfilePage] = SwitchProfilePage
         };
 
     /// <summary>
@@ -142,5 +148,39 @@ public static partial class EventHandler
         IServiceProvider services)
     {
         await args.Message.DeleteAsync();
+    }
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.SwitchProfilePage"/>: reads
+    /// the selected <see cref="ProfilePage"/> option from the dropdown on a
+    /// user's own profile card and updates the message in-place with either
+    /// the Profile view or the Settings view.
+    /// </summary>
+    private static async Task SwitchProfilePage(DiscordClient sender, ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var selectedValue = args.Values.FirstOrDefault();
+        if (!Enum.TryParse<ProfilePage>(selectedValue, ignoreCase: true, out var targetPage))
+        {
+            throw new ArgumentException($"Unknown profile page selection '{selectedValue}'.");
+        }
+
+        var userService = services.GetRequiredService<IUserService>();
+        var enumService = services.GetRequiredService<IEnumService>();
+        bool isEphemeral = args.Guild is not null;
+
+        var viewFactory = new ViewFactory(isEphemeral, enumService, new ServerSettings());
+        var handler = new ProfileHandler(userService, enumService, viewFactory);
+
+        DiscordMessageBuilder message = targetPage switch
+        {
+            ProfilePage.Profile => await handler.ViewAsync(args.User.Id, args.User.Id),
+            ProfilePage.Settings => await handler.SettingsAsync(args.User.Id),
+            _ => throw new ArgumentOutOfRangeException(nameof(targetPage), targetPage, "Unsupported profile page.")
+        };
+
+        await args.Interaction.CreateResponseAsync(
+            InteractionResponseType.UpdateMessage,
+            new DiscordInteractionResponseBuilder(message));
     }
 }

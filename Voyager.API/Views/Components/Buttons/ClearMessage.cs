@@ -17,7 +17,7 @@ public static partial class Buttons
     /// this keeps the button (and the views that use it) constructible in
     /// unit tests.
     /// </summary>
-    private static readonly DiscordComponentEmoji ClearEmoji = new("❌"); // ❌
+    private static readonly DiscordComponentEmoji ClearEmoji = new("❌");
 
     /// <summary>
     /// Builds a secondary "clear" button whose <c>custom_id</c> matches

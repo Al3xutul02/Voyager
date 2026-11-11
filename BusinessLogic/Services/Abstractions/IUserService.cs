@@ -8,7 +8,7 @@ namespace BusinessLogic.Services.Abstractions;
 /// User service implementation for user information from the database
 /// </summary>
 public interface IUserService
-    : IBaseService<User, UserReadDto, UserCreateDto, UserUpdateDto>
+    : IBaseService<ulong, User, UserReadDto, UserCreateDto, UserUpdateDto>
 {
     /// <summary>
     /// Retrieves a user by their name.

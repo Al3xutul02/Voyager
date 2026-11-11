@@ -8,55 +8,56 @@ namespace BusinessLogic.Services.Generic;
 /// The implementation of the <see cref="IBaseService{T}"/> interface
 /// </summary>
 /// <typeparam name="T">The class model for the repository</typeparam>
-/// <typeparam name="TReadDto">The read DTO of the entity</typeparam>
-/// <typeparam name="TCreateDto">The create DTO of the entity</typeparam>
-/// <typeparam name="TUpdateDto">The update DTO of the entity</typeparam>
-/// <param name="mapper">The mapper for the DTOs and models</param>
+/// <typeparam name="TReadModel">The read model of the entity</typeparam>
+/// <typeparam name="TCreateModel">The create model of the entity</typeparam>
+/// <typeparam name="TUpdateModel">The update model of the entity</typeparam>
+/// <param name="mapper">The mapper for the models</param>
 /// <param name="repository">The main repository the service communicates with</param>
-public abstract class BaseService<T, TReadDto, TCreateDto, TUpdateDto>(
+public abstract class BaseService<KeyType, T, TReadModel, TCreateModel, TUpdateModel>(
     IMapper mapper,
-    IBaseRepository<T> repository) : IBaseService<T, TReadDto, TCreateDto, TUpdateDto>
+    IBaseRepository<KeyType, T> repository) : IBaseService<KeyType, T, TReadModel, TCreateModel, TUpdateModel>
+    where KeyType : notnull
     where T : class
-    where TReadDto : class
-    where TCreateDto : class
-    where TUpdateDto : class
+    where TReadModel : class
+    where TCreateModel : class
+    where TUpdateModel : class
 {
     protected readonly IMapper _mapper = mapper;
-    protected readonly IBaseRepository<T> _repository = repository;
+    protected readonly IBaseRepository<KeyType, T> _repository = repository;
 
     /// <inheritdoc />
-    public virtual async Task<TReadDto?> GetByIdAsync(ulong id)
+    public virtual async Task<TReadModel?> GetByIdAsync(KeyType id)
     {
         var entity = await _repository.GetByIdAsync(id, IncludeBehavior.NoInclude);
-        return entity != null ? _mapper.Map<TReadDto>(entity) : null;
+        return entity != null ? _mapper.Map<TReadModel>(entity) : null;
     }
 
     /// <inheritdoc />
-    public virtual async Task<IEnumerable<TReadDto>> GetAllAsync()
+    public virtual async Task<IEnumerable<TReadModel>> GetAllAsync()
     {
         IEnumerable<T> entities = await _repository.GetAllAsync(IncludeBehavior.NoInclude);
-        return _mapper.Map<IEnumerable<TReadDto>>(entities);
+        return _mapper.Map<IEnumerable<TReadModel>>(entities);
     }
 
     /// <inheritdoc />
-    public virtual async Task CreateAsync(TCreateDto entityCreateDto)
+    public virtual async Task CreateAsync(TCreateModel entityCreateModel)
     {
-        var entity = _mapper.Map<T>(entityCreateDto);
+        var entity = _mapper.Map<T>(entityCreateModel);
         await _repository.AddAsync(entity);
         await _repository.SaveAsync();
     }
 
     /// <inheritdoc />
-    public virtual async Task UpdateAsync(TUpdateDto dto)
+    public virtual async Task UpdateAsync(TUpdateModel updateModel)
     {
 
-        var entity = _mapper.Map<T>(dto);
+        var entity = _mapper.Map<T>(updateModel);
         _repository.Update(entity);
         await _repository.SaveAsync();
     }
 
     /// <inheritdoc />
-    public virtual async Task DeleteAsync(ulong id)
+    public virtual async Task DeleteAsync(KeyType id)
     {
         var entity = await _repository.GetByIdAsync(id, IncludeBehavior.NoInclude)
             ?? throw new Exception("User not found");

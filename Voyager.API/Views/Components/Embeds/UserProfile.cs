@@ -1,8 +1,7 @@
 using BusinessLogic.Dtos.User;
-using BusinessLogic.Json.Models;
+using BusinessLogic.Enums.Types;
 using BusinessLogic.Services.Abstractions;
 using DSharpPlus.Entities;
-using Voyager.API.Enums.Types;
 
 namespace Voyager.API.Views.Components.Embeds;
 
@@ -15,21 +14,23 @@ public static partial class Embeds
     /// <summary>
     /// Builds the user profile embed shown by <c>/profile view</c>:
     /// title from the user's name, color from their saved palette choice,
-    /// and placeholder lists for games and characters until those features
-    /// are implemented.
+    /// and placeholder lists for games and characters (respecting privacy
+    /// settings when viewed by someone other than the profile owner).
     /// </summary>
     /// <param name="enumService">Used to translate the stored palette color to a <see cref="DiscordColor"/>.</param>
     /// <param name="userDto">The user whose profile is being rendered.</param>
+    /// <param name="callerId">The Discord user ID of the person viewing the profile.</param>
     public static DiscordEmbedBuilder UserProfile(
-        IEnumService enumService, UserReadDto userDto)
+        IEnumService enumService, UserReadDto userDto, ulong callerId)
     {
-        // Construct game list
-        string gameList = "_No Current Games_";
+        string gameList = callerId == userDto.Id || userDto.Settings.GamePrivacy == PrivacyOption.Public
+            ? "_No Current Games_"
+            : "_Games hidden by user_";
 
-        // Construct character list
-        string characterList = "_No Current Characters_";
+        string characterList = callerId == userDto.Id || userDto.Settings.CharacterPrivacy == PrivacyOption.Public
+            ? "_No Current Characters_"
+            : "_Characters hidden by user_";
 
-        // Construct player card
         return new DiscordEmbedBuilder
         {
             Title = $"{userDto.Name}'s Profile",

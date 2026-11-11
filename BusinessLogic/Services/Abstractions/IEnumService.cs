@@ -17,6 +17,13 @@ public interface IEnumService
     public Color ConvertColor(DiscordColor color);
 
     /// <summary>
+    /// Map a color name string (e.g. from slash command autocomplete) to the
+    /// matching <see cref="Color"/> palette entry. Case-insensitive; falls
+    /// back to <see cref="Color.Teal"/> when the input doesn't match.
+    /// </summary>
+    public Color ConvertColor(string color);
+
+    /// <summary>
     /// Map a palette <see cref="Color"/> to its DSharpPlus equivalent.
     /// Falls back to a default color when the input isn't registered.
     /// </summary>

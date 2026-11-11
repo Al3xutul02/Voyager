@@ -13,5 +13,8 @@ public enum NotificationType
     Error,
 
     /// <summary>Action completed successfully — rendered with the success color.</summary>
-    Success
+    Success,
+
+    /// <summary>Danger - some action may be harmful.</summary>
+    Warning
 }

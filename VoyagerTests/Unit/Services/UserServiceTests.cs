@@ -112,7 +112,7 @@ public class UserServiceTests
     [TestMethod]
     public async Task CreateAsync_AddsMappedEntityAndSaves()
     {
-        var createDto = new UserCreateDto(3, "New");
+        var createDto = new UserCreateDto(3, "New", new UserSettings());
 
         await _sut.CreateAsync(createDto);
 
