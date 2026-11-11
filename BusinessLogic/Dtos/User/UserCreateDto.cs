@@ -1,6 +1,8 @@
-﻿namespace BusinessLogic.Dtos.User;
+﻿using BusinessLogic.Json.Models;
+
+namespace BusinessLogic.Dtos.User;
 
 /// <summary>
 /// Data transfer object for user create information.
 /// </summary>
-public record UserCreateDto(ulong Id, string Name);
+public record UserCreateDto(ulong Id, string Name, UserSettings Settings);

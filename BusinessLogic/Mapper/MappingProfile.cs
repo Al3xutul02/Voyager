@@ -26,7 +26,7 @@ public class MappingProfile : Profile
 
         CreateMap<UserCreateDto, User>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(new UserSettings(), VoyagerJsonSettings.Default)));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
 
         CreateMap<User, UserReadDto>()
             .ForCtorParam(nameof(UserReadDto.Settings),

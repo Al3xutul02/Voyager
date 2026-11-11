@@ -5,4 +5,8 @@ namespace BusinessLogic.Json.Models;
 /// <summary>
 /// Json model for user app settings.
 /// </summary>
-public record UserSettings(Color Color = Color.Teal);
+public record UserSettings(
+    Color Color = Color.Teal,
+    PrivacyOption GamePrivacy = PrivacyOption.Public,
+    PrivacyOption CharacterPrivacy = PrivacyOption.Public
+);
