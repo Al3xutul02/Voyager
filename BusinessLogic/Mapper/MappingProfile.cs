@@ -1,4 +1,5 @@
 using AutoMapper;
+using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Json;
 using BusinessLogic.Json.Models;
@@ -33,6 +34,20 @@ public class MappingProfile : Profile
                 opt => opt.MapFrom(src => JsonConvert.DeserializeObject<UserSettings>(src.Settings, VoyagerJsonSettings.Default)));
 
         CreateMap<UserUpdateDto, User>()
+            .ForMember(dest => dest.Settings,
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
+
+        /// Servers
+
+        CreateMap<ServerCreateDto, Server>()
+            .ForMember(dest => dest.Settings,
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
+
+        CreateMap<Server, ServerReadDto>()
+            .ForCtorParam(nameof(ServerReadDto.Settings),
+                opt => opt.MapFrom(src => JsonConvert.DeserializeObject<ServerSettings>(src.Settings, VoyagerJsonSettings.Default)));
+
+        CreateMap<ServerUpdateDto, Server>()
             .ForMember(dest => dest.Settings,
                 opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
     }
