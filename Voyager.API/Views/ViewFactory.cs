@@ -1,3 +1,4 @@
+using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
@@ -85,6 +86,21 @@ public class ViewFactory(
         if (!_isEphemeral)
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
 
+        return messageBuilder;
+    }
+
+    /// <summary>
+    /// Builds the server-profile message used by <c>/server view</c> and
+    /// <c>/server setup</c>: the server profile embed plus a "Clear"
+    /// dismissal button when non-ephemeral.
+    /// </summary>
+    /// <param name="server">The server DTO whose profile is being rendered.</param>
+    public DiscordMessageBuilder CreateServerProfile(ServerReadDto server)
+    {
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.ServerProfile(_enumService, server));
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
         return messageBuilder;
     }
 }

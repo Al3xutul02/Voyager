@@ -137,9 +137,11 @@ public class Program
         // Business logic services
         builder.Services.AddScoped<IEnumService, EnumService>();
         builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IServerService, ServerService>();
 
         // Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IServerRepository, ServerRepository>();
 
         var app = builder.Build();
 

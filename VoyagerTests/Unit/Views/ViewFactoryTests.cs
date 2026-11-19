@@ -1,3 +1,4 @@
+using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
 using BusinessLogic.Json.Models;
@@ -10,8 +11,8 @@ namespace VoyagerTests.Views;
 
 /// <summary>
 /// Tests for <see cref="ViewFactory"/> covering ephemeral vs. non-ephemeral
-/// component attachment, privacy masking, and the profile/settings page
-/// switcher dropdown.
+/// component attachment, privacy masking, the profile/settings page
+/// switcher dropdown, and server profile embeds.
 /// </summary>
 [TestClass]
 public class ViewFactoryTests
@@ -156,5 +157,51 @@ public class ViewFactoryTests
         Assert.AreEqual("switchProfilePage", select.CustomId);
         Assert.IsTrue(select.Options.Single(o => o.Value == nameof(ProfilePage.Settings)).Default);
         Assert.IsFalse(select.Options.Single(o => o.Value == nameof(ProfilePage.Profile)).Default);
+    }
+
+    // ---- CreateServerProfile --------------------------------------------
+
+    [TestMethod]
+    public void CreateServerProfile_WithDescription_BuildsEmbedWithNameColorDescriptionAndModeFooter()
+    {
+        var dto = new ServerReadDto(
+            100,
+            "Golarion Guild",
+            "Welcome to our Westmarch server!",
+            200,
+            300,
+            new ServerSettings(ServerMode.Westmarch, Color.Gold));
+
+        var message = _nonEphemeralSut.CreateServerProfile(dto);
+
+        Assert.HasCount(1, message.Embeds);
+        DiscordEmbed embed = message.Embeds[0];
+        Assert.AreEqual("Golarion Guild", embed.Title);
+        Assert.AreEqual("Welcome to our Westmarch server!", embed.Description);
+        Assert.AreEqual(DiscordColor.Gold.Value, embed.Color.Value.Value);
+        Assert.AreEqual("Server Mode: Westmarch", embed.Footer.Text);
+        Assert.HasCount(1, message.Components);
+    }
+
+    [TestMethod]
+    public void CreateServerProfile_WithoutDescription_UsesPlaceholderAndOmitsClearButtonWhenEphemeral()
+    {
+        var dto = new ServerReadDto(
+            100,
+            "Quiet Server",
+            null,
+            200,
+            300,
+            new ServerSettings(ServerMode.Normal, Color.Blurple));
+
+        var message = _ephemeralSut.CreateServerProfile(dto);
+
+        Assert.HasCount(1, message.Embeds);
+        DiscordEmbed embed = message.Embeds[0];
+        Assert.AreEqual("Quiet Server", embed.Title);
+        Assert.AreEqual("_No description provided._", embed.Description);
+        Assert.AreEqual(DiscordColor.Blurple.Value, embed.Color.Value.Value);
+        Assert.AreEqual("Server Mode: Normal", embed.Footer.Text);
+        Assert.IsEmpty(message.Components);
     }
 }

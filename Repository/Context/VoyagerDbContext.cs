@@ -14,6 +14,11 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
     /// </summary>
     public DbSet<User> Users { get; set; } = null!;
 
+    /// <summary>
+    /// All Discord servers (guilds) configured for the bot. Mapped to the <c>servers</c> table.
+    /// </summary>
+    public DbSet<Server> Servers { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity => {
@@ -30,6 +35,51 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
             entity.Property(u => u.Settings)
                   .HasColumnType("text")
                   .IsRequired();
+
+            entity.Property(u => u.CreatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(u => u.UpdatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(u => u.DeletedAt)
+                  .HasColumnType("datetime");
+        });
+
+        modelBuilder.Entity<Server>(entity =>
+        {
+            entity.ToTable("servers");
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.Id)
+                  .ValueGeneratedNever();
+
+            entity.Property(s => s.Name)
+                  .HasMaxLength(100)
+                  .IsRequired();
+
+            entity.Property(s => s.Description)
+                  .HasColumnType("text")
+                  .HasDefaultValue(null);
+
+            entity.Property(s => s.GMRoleId)
+                  .IsRequired();
+
+            entity.Property(s => s.AdminChannelId)
+                  .IsRequired();
+
+            entity.Property(s => s.Settings)
+                  .HasColumnType("text")
+                  .IsRequired();
+
+            entity.Property(s => s.CreatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(s => s.UpdatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(s => s.DeletedAt)
+                  .HasColumnType("datetime");
         });
     }
 }
