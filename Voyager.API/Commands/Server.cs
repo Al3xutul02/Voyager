@@ -39,11 +39,11 @@ public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModul
     [SlashCommandPermissions(Permissions.ManageRoles | Permissions.ManageChannels)]
     [SlashCommand("setup", "Setup Voyager on your server")]
     public async Task Setup(InteractionContext ctx,
-        [Option("Server Mode", "The mode of server to setup")] ServerMode serverMode,
-        [Option("Create GM Role", "Whether to create a GM role")] bool createGmRole,
-        [Option("Create Admin Channel", "Whether to create an admin channel")] bool createAdminChannel,
-        [Option("GM Role", "The GM role to use")] DiscordRole? GmRole = null,
-        [Option("Admin Channel", "The admin channel to use (It is recommended that it is a private channel)")] DiscordChannel? AdminChannel = null)
+        [Option("ServerMode", "The mode of server to setup")] ServerMode serverMode,
+        [Option("CreateGMRole", "Whether to create a GM role")] bool createGmRole,
+        [Option("CreateAdminChannel", "Whether to create an admin channel")] bool createAdminChannel,
+        [Option("GMRole", "The GM role to use")] DiscordRole? GmRole = null,
+        [Option("AdminChannel", "The admin channel to use (It is recommended that it is a private channel)")] DiscordChannel? AdminChannel = null)
     {
         // Defer interaction — gives us up to 15 minutes to reply
         await ctx.DeferAsync(ephemeral: true);
@@ -85,17 +85,17 @@ public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModul
     /// <param name="warningColor">Optional new warning notification palette color name.</param>
     [SlashCommand("change", "Change the current server settings")]
     public async Task Change(InteractionContext ctx,
-        [Option("GM Role", "The GM role to use")] DiscordRole? gmRole = null,
-        [Option("Admin Channel", "The admin channel to use")] DiscordChannel? adminChannel = null,
+        [Option("GMRole", "The GM role to use")] DiscordRole? gmRole = null,
+        [Option("AdminChannel", "The admin channel to use")] DiscordChannel? adminChannel = null,
         [Option("Description", "The description for the server")] string? description = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("General Color", "The general color for the server", true)] string? generalColor = null,
+        [Option("GeneralColor", "The general color for the server", true)] string? generalColor = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("Error Color", "The error color for the server", true)] string? errorColor = null,
+        [Option("ErrorColor", "The error color for the server", true)] string? errorColor = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("Success Color", "The success color for the server", true)] string? successColor = null,
+        [Option("SuccessColor", "The success color for the server", true)] string? successColor = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("Warning Color", "The warning color for the server", true)] string? warningColor = null)
+        [Option("WarningColor", "The warning color for the server", true)] string? warningColor = null)
     {
         await ctx.DeferAsync(ephemeral: true);
         await using var scope = _scopeFactory.CreateAsyncScope();

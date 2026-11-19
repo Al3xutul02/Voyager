@@ -68,25 +68,7 @@ public class ServerHandlerTests
     }
 
     [TestMethod]
-    public async Task SetupAsync_WhenCreateGmRoleTrueAndGmRoleNull_ReturnsError()
-    {
-        var guild = CreateDiscordEntity<DiscordGuild>(100);
-
-        var message = await _sut.SetupAsync(
-            guild,
-            isServerOwner: true,
-            ServerMode.Normal,
-            createGmRole: true,
-            createAdminChannel: false,
-            gmRole: null,
-            adminChannel: CreateDiscordEntity<DiscordChannel>(20));
-
-        Assert.AreEqual("Error: GM role creation requested but no role provided.", message.Embeds[0].Title);
-        await _serverService.DidNotReceive().GetByIdAsync(Arg.Any<ulong>());
-    }
-
-    [TestMethod]
-    public async Task SetupAsync_WhenCreateAdminChannelTrueAndAdminChannelNull_ReturnsError()
+    public async Task SetupAsync_WhenCreateGmRoleFalseAndGmRoleNull_ReturnsError()
     {
         var guild = CreateDiscordEntity<DiscordGuild>(100);
 
@@ -95,11 +77,29 @@ public class ServerHandlerTests
             isServerOwner: true,
             ServerMode.Normal,
             createGmRole: false,
-            createAdminChannel: true,
+            createAdminChannel: false,
+            gmRole: null,
+            adminChannel: CreateDiscordEntity<DiscordChannel>(20));
+
+        Assert.AreEqual("Error: GM role creation not requested and no existing role provided.", message.Embeds[0].Title);
+        await _serverService.DidNotReceive().GetByIdAsync(Arg.Any<ulong>());
+    }
+
+    [TestMethod]
+    public async Task SetupAsync_WhenCreateAdminChannelFalseAndAdminChannelNull_ReturnsError()
+    {
+        var guild = CreateDiscordEntity<DiscordGuild>(100);
+
+        var message = await _sut.SetupAsync(
+            guild,
+            isServerOwner: true,
+            ServerMode.Normal,
+            createGmRole: false,
+            createAdminChannel: false,
             gmRole: CreateDiscordEntity<DiscordRole>(10),
             adminChannel: null);
 
-        Assert.AreEqual("Error: Admin channel creation requested but no channel provided.", message.Embeds[0].Title);
+        Assert.AreEqual("Error: Admin channel creation not requested and no existing channel provided.", message.Embeds[0].Title);
         await _serverService.DidNotReceive().GetByIdAsync(Arg.Any<ulong>());
     }
 
@@ -129,8 +129,9 @@ public class ServerHandlerTests
         var guild = CreateDiscordEntity<DiscordGuild>(100);
         _serverService.GetByIdAsync(100).Returns((ServerReadDto?)null);
 
-        // An unattached DiscordChannel has no live DiscordClient ApiClient,
-        // so AddOverwriteAsync throws inside the try block and is caught cleanly.
+        // An unattached DiscordGuild/DiscordChannel has no live DiscordClient ApiClient,
+        // so resolving the bot member or adding overwrites throws inside the try block
+        // and is caught cleanly.
         var message = await _sut.SetupAsync(
             guild,
             isServerOwner: true,

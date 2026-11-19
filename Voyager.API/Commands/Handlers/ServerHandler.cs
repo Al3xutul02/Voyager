@@ -51,14 +51,14 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
             return _viewFactory.CreateNotification(NotificationType.Error, "Error: Only the server owner can set up Voyager.");
         }
 
-        if (createGmRole && gmRole is null)
+        if (!createGmRole && gmRole is null)
         {
-            return _viewFactory.CreateNotification(NotificationType.Error, "Error: GM role creation requested but no role provided.");
+            return _viewFactory.CreateNotification(NotificationType.Error, "Error: GM role creation not requested and no existing role provided.");
         }
 
-        if (createAdminChannel && adminChannel is null)
+        if (!createAdminChannel && adminChannel is null)
         {
-            return _viewFactory.CreateNotification(NotificationType.Error, "Error: Admin channel creation requested but no channel provided.");
+            return _viewFactory.CreateNotification(NotificationType.Error, "Error: Admin channel creation not requested and no existing channel provided.");
         }
 
         var result = await _serverService.GetByIdAsync(guild.Id);
@@ -76,10 +76,21 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
 
             if (createAdminChannel)
             {
-                adminChannel = await guild.CreateChannelAsync("voyager-admin", DSharpPlus.ChannelType.Private, reason: "Voyager admin channel creation");
+                adminChannel = await guild.CreateChannelAsync("voyager-admin", DSharpPlus.ChannelType.Text, reason: "Voyager admin channel creation");
             }
 
-            await adminChannel!.AddOverwriteAsync(guild.Owner, allow: DSharpPlus.Permissions.All, deny: DSharpPlus.Permissions.None);
+            // Grant the bot explicit access first before denying @everyone,
+            // so the bot doesn't lock itself out of the channel when it isn't
+            // a full server Administrator. (The server owner automatically
+            // has full access to all channels in Discord.)
+            await adminChannel!.AddOverwriteAsync(
+                guild.CurrentMember,
+                allow: DSharpPlus.Permissions.AccessChannels | DSharpPlus.Permissions.SendMessages,
+                deny: DSharpPlus.Permissions.None);
+            await adminChannel!.AddOverwriteAsync(
+                guild.EveryoneRole,
+                allow: DSharpPlus.Permissions.None,
+                deny: DSharpPlus.Permissions.AccessChannels);
 
             var newServer = new ServerCreateDto(
                 Id: guild.Id,
