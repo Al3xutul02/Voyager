@@ -8,6 +8,7 @@ namespace BusinessLogic.Json.Models;
 /// which is per-user.
 /// </summary>
 public record ServerSettings(
+    ServerMode Mode = ServerMode.Normal,
     Color GeneralColor = Color.Teal,
     Color ErrorColor = Color.DarkRed,
     Color SuccessColor = Color.DarkGreen,

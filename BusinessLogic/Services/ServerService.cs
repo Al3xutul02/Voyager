@@ -9,7 +9,7 @@ using Repository.Repositories.Abstractions;
 namespace BusinessLogic.Services;
 
 public class ServerService(IMapper mapper, IServerRepository serverRepository)
-    : BaseService<ulong, Server, ServerReadDto, ServerUpdateDto, ServerCreateDto>(mapper, serverRepository), IServerService
+    : BaseService<ulong, Server, ServerReadDto, ServerCreateDto, ServerUpdateDto>(mapper, serverRepository), IServerService
 {
     private IServerRepository ServerRepository => (IServerRepository)_repository;
 

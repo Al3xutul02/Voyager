@@ -54,6 +54,16 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
                   .HasMaxLength(100)
                   .IsRequired();
 
+            entity.Property(s => s.Description)
+                  .HasColumnType("text")
+                  .HasDefaultValue(null);
+
+            entity.Property(s => s.GMRoleId)
+                  .IsRequired();
+
+            entity.Property(s => s.AdminChannelId)
+                  .IsRequired();
+
             entity.Property(s => s.Settings)
                   .HasColumnType("text")
                   .IsRequired();

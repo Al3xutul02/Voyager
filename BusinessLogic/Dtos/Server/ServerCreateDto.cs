@@ -2,4 +2,9 @@
 
 namespace BusinessLogic.Dtos.Server;
 
-public record ServerCreateDto(ulong Id, string Name, ServerSettings Settings);
+public record ServerCreateDto(
+    ulong Id,
+    string Name,
+    ulong GMRoleId,
+    ulong AdminChannelId,
+    ServerSettings Settings);

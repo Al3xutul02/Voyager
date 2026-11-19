@@ -1,3 +1,4 @@
+using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
@@ -85,6 +86,15 @@ public class ViewFactory(
         if (!_isEphemeral)
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
 
+        return messageBuilder;
+    }
+
+    public DiscordMessageBuilder CreateServerProfile(ServerReadDto server)
+    {
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.ServerProfile(_enumService, server));
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
         return messageBuilder;
     }
 }

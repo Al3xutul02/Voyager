@@ -6,6 +6,12 @@ public class Server
     
     public string Name { get; set; } = null!;
 
+    public string? Description { get; set; }
+
+    public ulong GMRoleId { get; set; }
+
+    public ulong AdminChannelId { get; set; }
+
     public string Settings { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
