@@ -22,6 +22,43 @@ namespace Repository.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Repository.Models.Server", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong>("AdminChannelId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<ulong>("GMRoleId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("servers", (string)null);
+                });
+
             modelBuilder.Entity("Repository.Models.User", b =>
                 {
                     b.Property<ulong>("Id")

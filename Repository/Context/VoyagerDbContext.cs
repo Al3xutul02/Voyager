@@ -13,6 +13,10 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
     /// All users known to the bot. Mapped to the <c>users</c> table.
     /// </summary>
     public DbSet<User> Users { get; set; } = null!;
+
+    /// <summary>
+    /// All Discord servers (guilds) configured for the bot. Mapped to the <c>servers</c> table.
+    /// </summary>
     public DbSet<Server> Servers { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

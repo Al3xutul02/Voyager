@@ -79,12 +79,13 @@ public static class MySqlContainerFixture
     }
 
     /// <summary>
-    /// Removes all rows from the users table so each test starts clean. Faster
-    /// than dropping/recreating the schema between tests.
+    /// Removes all rows from the users and servers tables so each test starts
+    /// clean. Faster than dropping/recreating the schema between tests.
     /// </summary>
     public static async Task ResetAsync()
     {
         await using var context = CreateContext();
         await context.Users.ExecuteDeleteAsync();
+        await context.Servers.ExecuteDeleteAsync();
     }
 }

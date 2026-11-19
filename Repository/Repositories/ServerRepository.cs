@@ -7,6 +7,10 @@ using Repository.Repositories.Generic;
 
 namespace Repository.Repositories;
 
+/// <summary>
+/// Repository implementation for <see cref="Server"/> entities.
+/// </summary>
+/// <param name="context">The database context to use for queries and persistence.</param>
 public class ServerRepository(DbContext context) : BaseRepository<ulong, Server>(context, "Id"), IServerRepository
 {
     /// <inheritdoc />

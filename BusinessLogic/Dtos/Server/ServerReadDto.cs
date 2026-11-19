@@ -2,6 +2,15 @@
 
 namespace BusinessLogic.Dtos.Server;
 
+/// <summary>
+/// Data transfer object representing a configured Discord server read from the database.
+/// </summary>
+/// <param name="Id">The Discord snowflake ID of the guild.</param>
+/// <param name="Name">The display name of the Discord guild.</param>
+/// <param name="Description">Optional description displayed on the server's profile card.</param>
+/// <param name="GMRoleId">The Discord snowflake ID of the server's Game Master role.</param>
+/// <param name="AdminChannelId">The Discord snowflake ID of the server's Voyager admin channel.</param>
+/// <param name="Settings">The server's deserialized <see cref="ServerSettings"/>.</param>
 public record ServerReadDto(
     ulong Id,
     string Name,

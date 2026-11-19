@@ -1,4 +1,5 @@
 using AutoMapper;
+using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
 using BusinessLogic.Json;
@@ -11,8 +12,8 @@ namespace VoyagerTests.Mapper;
 
 /// <summary>
 /// Tests for the AutoMapper <c>MappingProfile</c>, focusing on the
-/// User.Settings JSON round-trip and the positional-record ForCtorParam
-/// mapping that previously regressed.
+/// User.Settings and Server.Settings JSON round-trip and the positional-record
+/// ForCtorParam mapping that previously regressed.
 /// </summary>
 [TestClass]
 public class MappingProfileTests
@@ -26,6 +27,8 @@ public class MappingProfileTests
         // earliest possible point.
         _mapper.ConfigurationProvider.AssertConfigurationIsValid();
     }
+
+    // ---- User mappings --------------------------------------------------
 
     [TestMethod]
     public void Map_UserToUserReadDto_DeserializesSettingsViaCtorParam()
@@ -103,5 +106,89 @@ public class MappingProfileTests
         var settings = JsonConvert.DeserializeObject<UserSettings>(
             roundTripped.Settings, VoyagerJsonSettings.Default);
         Assert.AreEqual(Color.Magenta, settings!.Color);
+    }
+
+    // ---- Server mappings ------------------------------------------------
+
+    [TestMethod]
+    public void Map_ServerToServerReadDto_DeserializesSettingsViaCtorParam()
+    {
+        var settingsJson = JsonConvert.SerializeObject(
+            new ServerSettings(ServerMode.Westmarch, Color.Gold, Color.Red, Color.Green, Color.Yellow),
+            VoyagerJsonSettings.Default);
+        var server = new Server
+        {
+            Id = 100,
+            Name = "Pathfinder Hub",
+            Description = "A shared Westmarch world",
+            GMRoleId = 200,
+            AdminChannelId = 300,
+            Settings = settingsJson
+        };
+
+        var dto = _mapper.Map<ServerReadDto>(server);
+
+        Assert.AreEqual(100UL, dto.Id);
+        Assert.AreEqual("Pathfinder Hub", dto.Name);
+        Assert.AreEqual("A shared Westmarch world", dto.Description);
+        Assert.AreEqual(200UL, dto.GMRoleId);
+        Assert.AreEqual(300UL, dto.AdminChannelId);
+        Assert.AreEqual(ServerMode.Westmarch, dto.Settings.Mode);
+        Assert.AreEqual(Color.Gold, dto.Settings.GeneralColor);
+        Assert.AreEqual(Color.Red, dto.Settings.ErrorColor);
+        Assert.AreEqual(Color.Green, dto.Settings.SuccessColor);
+        Assert.AreEqual(Color.Yellow, dto.Settings.WarningColor);
+    }
+
+    [TestMethod]
+    public void Map_ServerCreateDtoToServer_SerializesSettings()
+    {
+        var createDto = new ServerCreateDto(
+            10,
+            "NewServer",
+            111,
+            222,
+            new ServerSettings(ServerMode.Westmarch));
+
+        var server = _mapper.Map<Server>(createDto);
+
+        Assert.AreEqual(10UL, server.Id);
+        Assert.AreEqual("NewServer", server.Name);
+        Assert.IsNull(server.Description);
+        Assert.AreEqual(111UL, server.GMRoleId);
+        Assert.AreEqual(222UL, server.AdminChannelId);
+
+        var settings = JsonConvert.DeserializeObject<ServerSettings>(
+            server.Settings, VoyagerJsonSettings.Default);
+        Assert.IsNotNull(settings);
+        Assert.AreEqual(ServerMode.Westmarch, settings!.Mode);
+        Assert.AreEqual(Color.Teal, settings.GeneralColor);
+    }
+
+    [TestMethod]
+    public void Map_ServerUpdateDtoToServer_SerializesProvidedSettingsAndDescription()
+    {
+        var updateDto = new ServerUpdateDto(
+            10,
+            "UpdatedServer",
+            "Custom description",
+            333,
+            444,
+            new ServerSettings(ServerMode.Normal, Color.Purple, Color.DarkRed, Color.SpringGreen, Color.Orange));
+
+        var server = _mapper.Map<Server>(updateDto);
+
+        Assert.AreEqual(10UL, server.Id);
+        Assert.AreEqual("UpdatedServer", server.Name);
+        Assert.AreEqual("Custom description", server.Description);
+        Assert.AreEqual(333UL, server.GMRoleId);
+        Assert.AreEqual(444UL, server.AdminChannelId);
+
+        var settings = JsonConvert.DeserializeObject<ServerSettings>(
+            server.Settings, VoyagerJsonSettings.Default);
+        Assert.IsNotNull(settings);
+        Assert.AreEqual(ServerMode.Normal, settings!.Mode);
+        Assert.AreEqual(Color.Purple, settings.GeneralColor);
+        Assert.AreEqual(Color.SpringGreen, settings.SuccessColor);
     }
 }

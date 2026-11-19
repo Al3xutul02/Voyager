@@ -89,6 +89,12 @@ public class ViewFactory(
         return messageBuilder;
     }
 
+    /// <summary>
+    /// Builds the server-profile message used by <c>/server view</c> and
+    /// <c>/server setup</c>: the server profile embed plus a "Clear"
+    /// dismissal button when non-ephemeral.
+    /// </summary>
+    /// <param name="server">The server DTO whose profile is being rendered.</param>
     public DiscordMessageBuilder CreateServerProfile(ServerReadDto server)
     {
         var messageBuilder = new DiscordMessageBuilder()

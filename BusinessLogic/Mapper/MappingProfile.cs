@@ -27,7 +27,10 @@ public class MappingProfile : Profile
 
         CreateMap<UserCreateDto, User>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)))
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
 
         CreateMap<User, UserReadDto>()
             .ForCtorParam(nameof(UserReadDto.Settings),
@@ -35,13 +38,19 @@ public class MappingProfile : Profile
 
         CreateMap<UserUpdateDto, User>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)))
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
 
-        /// Servers
-
+        // Servers
         CreateMap<ServerCreateDto, Server>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)))
+            .ForMember(dest => dest.Description, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
 
         CreateMap<Server, ServerReadDto>()
             .ForCtorParam(nameof(ServerReadDto.Settings),
@@ -49,6 +58,9 @@ public class MappingProfile : Profile
 
         CreateMap<ServerUpdateDto, Server>()
             .ForMember(dest => dest.Settings,
-                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)));
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)))
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
     }
 }

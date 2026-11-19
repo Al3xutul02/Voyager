@@ -4,38 +4,61 @@ using BusinessLogic.Services.Abstractions;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using DSharpPlus.SlashCommands.Attributes;
 using Voyager.API.Commands.Autocompletes;
 using Voyager.API.Commands.Handlers;
 using Voyager.API.Views;
 
 namespace Voyager.API.Commands;
 
+/// <summary>
+/// Command group for Discord server (guild) configuration commands
+/// (<c>/server setup</c>, <c>/server view</c>, <c>/server change</c>).
+/// Restricted to guild channels via <see cref="GuildOnlyAttribute"/>.
+/// </summary>
+/// <param name="scopeFactory">
+/// Factory used to create a DI scope per interaction so scoped services
+/// (<see cref="IServerService"/>, <see cref="IEnumService"/>) can be resolved safely.
+/// </param>
 [GuildOnly]
 [SlashCommandGroup("server", "Commands regarding the server")]
 public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModule
 {
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
 
+    /// <summary>
+    /// Initializes Voyager on the current Discord server by creating or
+    /// binding the Game Master role and Admin channel, configuring the
+    /// server's operating <see cref="ServerMode"/>, and persisting the server record.
+    /// </summary>
+    /// <param name="ctx">The DSharpPlus slash command interaction context.</param>
+    /// <param name="serverMode">The operating mode for the server (<see cref="ServerMode.Normal"/> or <see cref="ServerMode.Westmarch"/>).</param>
+    /// <param name="createGmRole">Whether Voyager should create a new Game Master role on the server.</param>
+    /// <param name="createAdminChannel">Whether Voyager should create a new private admin channel on the server.</param>
+    /// <param name="GmRole">Existing GM role to use (or template when <paramref name="createGmRole"/> is set).</param>
+    /// <param name="AdminChannel">Existing admin channel to use (recommended to be a private channel).</param>
     [SlashCommandPermissions(Permissions.ManageRoles | Permissions.ManageChannels)]
     [SlashCommand("setup", "Setup Voyager on your server")]
     public async Task Setup(InteractionContext ctx,
         [Option("Server Mode", "The mode of server to setup")] ServerMode serverMode,
-        [Option("Create GM Role", "Whether to create a GM role")]  bool createGmRole,
+        [Option("Create GM Role", "Whether to create a GM role")] bool createGmRole,
         [Option("Create Admin Channel", "Whether to create an admin channel")] bool createAdminChannel,
-        [Option("GM Role", "The GM role to use")] DiscordRole? GmRole,
-        [Option("Admin Channel", "The admin channel to use (It is recommended that it is a private channel)")] DiscordChannel? AdminChannel)
+        [Option("GM Role", "The GM role to use")] DiscordRole? GmRole = null,
+        [Option("Admin Channel", "The admin channel to use (It is recommended that it is a private channel)")] DiscordChannel? AdminChannel = null)
     {
         // Defer interaction — gives us up to 15 minutes to reply
         await ctx.DeferAsync(ephemeral: true);
         await using var scope = _scopeFactory.CreateAsyncScope();
         var handler = CreateHandler(scope.ServiceProvider, true);
-        
+
         var message = await handler.SetupAsync(ctx.Guild, ctx.Guild.OwnerId == ctx.User.Id, serverMode,
             createGmRole, createAdminChannel, GmRole, AdminChannel);
         await ctx.EditResponseAsync(new DiscordWebhookBuilder(message));
     }
 
+    /// <summary>
+    /// Displays the current server's Voyager profile and settings.
+    /// </summary>
+    /// <param name="ctx">The DSharpPlus slash command interaction context.</param>
     [SlashCommand("view", "View the current server settings")]
     public async Task View(InteractionContext ctx)
     {
@@ -47,19 +70,32 @@ public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModul
         await ctx.EditResponseAsync(new DiscordWebhookBuilder(message));
     }
 
+    /// <summary>
+    /// Updates one or more of the server's settings (GM role, admin channel,
+    /// description, or notification palette colors). Shows a warning if no
+    /// options are provided.
+    /// </summary>
+    /// <param name="ctx">The DSharpPlus slash command interaction context.</param>
+    /// <param name="gmRole">Optional new Game Master role for the server.</param>
+    /// <param name="adminChannel">Optional new Voyager admin channel for the server.</param>
+    /// <param name="description">Optional new description for the server profile card.</param>
+    /// <param name="generalColor">Optional new general palette color name.</param>
+    /// <param name="errorColor">Optional new error notification palette color name.</param>
+    /// <param name="successColor">Optional new success notification palette color name.</param>
+    /// <param name="warningColor">Optional new warning notification palette color name.</param>
     [SlashCommand("change", "Change the current server settings")]
     public async Task Change(InteractionContext ctx,
-        [Option("GM Role", "The GM role to use")] DiscordRole? gmRole,
-        [Option("Admin Channel", "The admin channel to use")] DiscordChannel? adminChannel,
-        [Option("Description", "The description for the server")] string? description,
+        [Option("GM Role", "The GM role to use")] DiscordRole? gmRole = null,
+        [Option("Admin Channel", "The admin channel to use")] DiscordChannel? adminChannel = null,
+        [Option("Description", "The description for the server")] string? description = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("General Color", "The general color for the server", true)] string? generalColor,
+        [Option("General Color", "The general color for the server", true)] string? generalColor = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("Error Color", "The error color for the server", true)] string? errorColor,
+        [Option("Error Color", "The error color for the server", true)] string? errorColor = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("Success Color", "The success color for the server", true)] string? successColor,
+        [Option("Success Color", "The success color for the server", true)] string? successColor = null,
         [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("Warning Color", "The warning color for the server", true)] string? warningColor)
+        [Option("Warning Color", "The warning color for the server", true)] string? warningColor = null)
     {
         await ctx.DeferAsync(ephemeral: true);
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -70,13 +106,20 @@ public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModul
         await ctx.EditResponseAsync(new DiscordWebhookBuilder(message));
     }
 
+    /// <summary>
+    /// Resolves scoped services from <paramref name="services"/> and constructs
+    /// a <see cref="ServerHandler"/> configured for the current interaction's
+    /// ephemerality.
+    /// </summary>
+    /// <param name="services">The active per-interaction scoped service provider.</param>
+    /// <param name="isEphemeral">Whether the interaction response is ephemeral.</param>
     private static ServerHandler CreateHandler(IServiceProvider services, bool isEphemeral)
     {
         var serverService = services.GetRequiredService<IServerService>();
         var enumService = services.GetRequiredService<IEnumService>();
 
         // The command stays a thin adapter: it only translates the Discord
-        // interaction into primitives and hands off to ProfileHandler, which
+        // interaction into primitives and hands off to ServerHandler, which
         // holds the testable logic.
         var viewFactory = new ViewFactory(isEphemeral, enumService, new ServerSettings());
         return new ServerHandler(serverService, enumService, viewFactory);

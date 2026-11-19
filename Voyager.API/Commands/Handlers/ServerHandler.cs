@@ -8,12 +8,35 @@ using Voyager.API.Views;
 
 namespace Voyager.API.Commands.Handlers;
 
+/// <summary>
+/// Testable core of the <c>/server</c> command group (<c>setup</c>, <c>view</c>,
+/// <c>change</c>). Encapsulates validation, database persistence via
+/// <see cref="IServerService"/>, and response message construction via
+/// <see cref="ViewFactory"/>.
+/// </summary>
+/// <param name="serverService">Source of server configuration data.</param>
+/// <param name="enumService">Converts color names and palette enums.</param>
+/// <param name="viewFactory">Builds the Discord message for the response.</param>
 public class ServerHandler(IServerService serverService, IEnumService enumService, ViewFactory viewFactory)
 {
     private readonly IServerService _serverService = serverService;
     private readonly IEnumService _enumService = enumService;
     private readonly ViewFactory _viewFactory = viewFactory;
 
+    /// <summary>
+    /// Builds the response for <c>/server setup</c>: validates ownership and
+    /// role/channel parameters, verifies the server is not already registered,
+    /// optionally creates the GM role and admin channel on Discord, persists
+    /// the new server record, posts the server profile card in the admin
+    /// channel, and returns a status notification.
+    /// </summary>
+    /// <param name="guild">The Discord guild being set up.</param>
+    /// <param name="isServerOwner">Whether the command caller is the guild owner.</param>
+    /// <param name="serverMode">The operating mode chosen for the server.</param>
+    /// <param name="createGmRole">Whether to create a new GM role on the guild.</param>
+    /// <param name="createAdminChannel">Whether to create a new admin channel on the guild.</param>
+    /// <param name="gmRole">Existing GM role provided by the caller, if any.</param>
+    /// <param name="adminChannel">Existing admin channel provided by the caller, if any.</param>
     public async Task<DiscordMessageBuilder> SetupAsync(
         DiscordGuild guild,
         bool isServerOwner,
@@ -55,7 +78,7 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
             {
                 adminChannel = await guild.CreateChannelAsync("voyager-admin", DSharpPlus.ChannelType.Private, reason: "Voyager admin channel creation");
             }
-            
+
             await adminChannel!.AddOverwriteAsync(guild.Owner, allow: DSharpPlus.Permissions.All, deny: DSharpPlus.Permissions.None);
 
             var newServer = new ServerCreateDto(
@@ -73,10 +96,15 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
         }
         catch (Exception)
         {
-            return _viewFactory.CreateNotification(NotificationType.Error, $"Error: Something went wrong while setting up Voyager.");
+            return _viewFactory.CreateNotification(NotificationType.Error, "Error: Something went wrong while setting up Voyager.");
         }
     }
 
+    /// <summary>
+    /// Builds the response for <c>/server view</c>: the server's profile card
+    /// if the guild is registered, otherwise an error notification.
+    /// </summary>
+    /// <param name="guildId">The Discord snowflake ID of the guild to view.</param>
     public async Task<DiscordMessageBuilder> ViewAsync(ulong guildId)
     {
         var server = await _serverService.GetByIdAsync(guildId);
@@ -87,6 +115,20 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
         return _viewFactory.CreateServerProfile(server);
     }
 
+    /// <summary>
+    /// Builds the response for <c>/server change</c>: updates the guild's
+    /// stored configuration and <see cref="ServerSettings"/> with any non-null
+    /// parameters provided. Returns a warning notification without hitting the
+    /// database when no options are supplied.
+    /// </summary>
+    /// <param name="guildId">The Discord snowflake ID of the guild to update.</param>
+    /// <param name="gmRole">Optional new Game Master role.</param>
+    /// <param name="adminChannel">Optional new Voyager admin channel.</param>
+    /// <param name="description">Optional new description for the server profile card.</param>
+    /// <param name="generalColor">Optional new general palette color name.</param>
+    /// <param name="errorColor">Optional new error notification palette color name.</param>
+    /// <param name="successColor">Optional new success notification palette color name.</param>
+    /// <param name="warningColor">Optional new warning notification palette color name.</param>
     public async Task<DiscordMessageBuilder> ChangeAsync(
         ulong guildId,
         DiscordRole? gmRole,

@@ -23,9 +23,18 @@ public class User
     /// </summary>
     public string Settings { get; set; } = null!;
 
+    /// <summary>
+    /// UTC timestamp when the user record was first created.
+    /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// UTC timestamp when the user record was last modified.
+    /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Optional UTC timestamp when the user record was soft-deleted, or <c>null</c> if active.
+    /// </summary>
     public DateTime? DeletedAt { get; set; }
 }
