@@ -37,4 +37,9 @@ public class User
     /// Optional UTC timestamp when the user record was soft-deleted, or <c>null</c> if active.
     /// </summary>
     public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
+    /// Saved dice roll configurations belonging to this user.
+    /// </summary>
+    public ICollection<DiceRoll> DiceRolls { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using AutoMapper;
+using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
@@ -190,5 +191,45 @@ public class MappingProfileTests
         Assert.AreEqual(ServerMode.Normal, settings!.Mode);
         Assert.AreEqual(Color.Purple, settings.GeneralColor);
         Assert.AreEqual(Color.SpringGreen, settings.SuccessColor);
+    }
+
+    // ---- DiceRoll mappings ----------------------------------------------
+
+    [TestMethod]
+    public void Map_DiceRollCreateDtoToDiceRoll_MapsUserIdNameAndFormula()
+    {
+        var createDto = new DiceRollCreateDto(42, "Fireball", "(6d6)[fire]");
+
+        var entity = _mapper.Map<DiceRoll>(createDto);
+
+        Assert.AreEqual(42UL, entity.UserId);
+        Assert.AreEqual("Fireball", entity.Name);
+        Assert.AreEqual("(6d6)[fire]", entity.Formula);
+    }
+
+    [TestMethod]
+    public void Map_DiceRollToDiceRollReadDto_MapsAllProperties()
+    {
+        var entity = new DiceRoll { Id = 99, UserId = 42, Name = "Longsword", Formula = "1d8+4" };
+
+        var dto = _mapper.Map<DiceRollReadDto>(entity);
+
+        Assert.AreEqual(99UL, dto.Id);
+        Assert.AreEqual(42UL, dto.UserId);
+        Assert.AreEqual("Longsword", dto.Name);
+        Assert.AreEqual("1d8+4", dto.Formula);
+    }
+
+    [TestMethod]
+    public void Map_DiceRollUpdateDtoToDiceRoll_MapsAllProperties()
+    {
+        var updateDto = new DiceRollUpdateDto(99, 42, "Longsword +1", "2d8+4");
+
+        var entity = _mapper.Map<DiceRoll>(updateDto);
+
+        Assert.AreEqual(99UL, entity.Id);
+        Assert.AreEqual(42UL, entity.UserId);
+        Assert.AreEqual("Longsword +1", entity.Name);
+        Assert.AreEqual("2d8+4", entity.Formula);
     }
 }

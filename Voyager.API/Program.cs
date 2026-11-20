@@ -78,6 +78,7 @@ public class Program
             DiscordClient.GuildMemberAdded += Events.EventHandler.GuildMemberAdded;
             DiscordClient.GuildMemberRemoved += Events.EventHandler.GuildMemberRemoved;
             DiscordClient.ComponentInteractionCreated += Events.EventHandler.ComponentInteractionCreated;
+            DiscordClient.ModalSubmitted += Events.EventHandler.ModalSubmitted;
 
             var slashCommandsConfig = DiscordClient.UseSlashCommands(new SlashCommandsConfiguration
             {
@@ -138,10 +139,12 @@ public class Program
         builder.Services.AddScoped<IEnumService, EnumService>();
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IServerService, ServerService>();
+        builder.Services.AddScoped<IDiceRollService, DiceRollService>();
 
         // Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IServerRepository, ServerRepository>();
+        builder.Services.AddScoped<IDiceRollRepository, DiceRollRepository>();
 
         var app = builder.Build();
 

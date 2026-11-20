@@ -84,7 +84,10 @@ public class EnumService : IEnumService
         {
             [InteractionIdType.None]              = "none",
             [InteractionIdType.ClearAlert]        = "clearAlert",
-            [InteractionIdType.SwitchProfilePage] = "switchProfilePage"
+            [InteractionIdType.SwitchProfilePage] = "switchProfilePage",
+            [InteractionIdType.SaveRoll]          = "saveRoll",
+            [InteractionIdType.ClearRoll]         = "clearRoll",
+            [InteractionIdType.SaveRollModal]     = "saveRollModal"
         }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, InteractionIdType> ReverseInteractionMap =

@@ -1,5 +1,7 @@
+using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
+using BusinessLogic.Enums.Types;
 using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
 using DSharpPlus.Entities;
@@ -108,6 +110,46 @@ public class ViewFactory(
 
         if (!_isEphemeral)
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+        return messageBuilder;
+    }
+
+    /// <summary>
+    /// Builds the dice roll result or statistics message used by <c>/dice roll</c>:
+    /// the dice roll embed plus a row containing the "Save" button and the
+    /// restricted "Clear" button.
+    /// </summary>
+    /// <param name="callerId">The Discord snowflake ID of the user who rolled.</param>
+    /// <param name="callerName">The Discord username of the user who rolled.</param>
+    /// <param name="evaluation">The evaluated dice roll result and statistics.</param>
+    /// <param name="color">Optional user profile color; defaults to <see cref="ServerSettings.GeneralColor"/> when omitted.</param>
+    /// <param name="savedRollName">Optional name of the saved dice configuration if one was rolled.</param>
+    public DiscordMessageBuilder CreateDiceRoll(
+        ulong callerId,
+        string callerName,
+        DiceEvaluationResultDto evaluation,
+        Color? color = null,
+        string? savedRollName = null)
+    {
+        var embedColor = color ?? Settings.GeneralColor;
+        return new DiscordMessageBuilder()
+            .AddEmbed(Embeds.DiceRoll(_enumService, embedColor, callerId, callerName, evaluation, savedRollName))
+            .AddComponents(
+                Buttons.SaveRoll(_enumService, "Save"),
+                Buttons.ClearRoll(_enumService, "Clear"));
+    }
+
+    /// <summary>
+    /// Builds the dice roll syntax and rules guide message used by <c>/dice guide</c>:
+    /// the guide embed plus a "Clear" dismissal button when non-ephemeral.
+    /// </summary>
+    public DiscordMessageBuilder CreateDiceGuide()
+    {
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.DiceGuide(_enumService, Settings));
+
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+
         return messageBuilder;
     }
 }

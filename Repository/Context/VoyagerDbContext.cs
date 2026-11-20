@@ -19,6 +19,11 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
     /// </summary>
     public DbSet<Server> Servers { get; set; } = null!;
 
+    /// <summary>
+    /// All saved user dice roll configurations. Mapped to the <c>dice_rolls</c> table.
+    /// </summary>
+    public DbSet<DiceRoll> DiceRolls { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity => {
@@ -79,6 +84,40 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
                   .HasColumnType("datetime")
                   .IsRequired();
             entity.Property(s => s.DeletedAt)
+                  .HasColumnType("datetime");
+        });
+
+        modelBuilder.Entity<DiceRoll>(entity =>
+        {
+            entity.ToTable("dice_rolls");
+            entity.HasKey(d => d.Id);
+
+            entity.Property(d => d.Id)
+                  .ValueGeneratedOnAdd();
+
+            entity.Property(d => d.UserId)
+                  .IsRequired();
+
+            entity.HasOne(d => d.User)
+                  .WithMany(u => u.DiceRolls)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(d => d.Name)
+                  .HasMaxLength(100)
+                  .IsRequired();
+
+            entity.Property(d => d.Formula)
+                  .HasColumnType("text")
+                  .IsRequired();
+
+            entity.Property(d => d.CreatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(d => d.UpdatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(d => d.DeletedAt)
                   .HasColumnType("datetime");
         });
     }
