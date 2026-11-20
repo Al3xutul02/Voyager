@@ -28,8 +28,14 @@ public class ViewFactory(
     IEnumService enumService,
     ServerSettings settings)
 {
+    public ServerSettings Settings
+    {
+        get => settings ?? throw new ArgumentNullException(nameof(settings), "ServerSettings cannot be null when constructing a ViewFactory.");
+
+        set => settings = value ?? throw new ArgumentNullException(nameof(settings), "ServerSettings cannot be null when constructing a ViewFactory.");
+    }
+
     private readonly bool _isEphemeral = isEphemeral;
-    private readonly ServerSettings _settings = settings;
     private readonly IEnumService _enumService = enumService;
 
     /// <summary>
@@ -41,7 +47,7 @@ public class ViewFactory(
     public DiscordMessageBuilder CreateNotification(NotificationType notificationType, string message)
     {
         var messageBuilder = new DiscordMessageBuilder()
-            .AddEmbed(Embeds.Notification(_enumService, _settings, notificationType, message));
+            .AddEmbed(Embeds.Notification(_enumService, Settings, notificationType, message));
 
         if (!_isEphemeral)
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear this notification"));

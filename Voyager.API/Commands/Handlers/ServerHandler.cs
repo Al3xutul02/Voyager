@@ -103,6 +103,8 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
             await _serverService.CreateAsync(newServer);
             var serverReadDto = await _serverService.GetByIdAsync(newServer.Id);
             await adminChannel!.SendMessageAsync(_viewFactory.CreateServerProfile(serverReadDto!));
+
+            _viewFactory.Settings = serverReadDto!.Settings;
             return _viewFactory.CreateNotification(NotificationType.Success, "Success: Voyager has been set up for this server.");
         }
         catch (Exception)
@@ -123,6 +125,8 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
         {
             return _viewFactory.CreateNotification(NotificationType.Error, "Error: This server is not set up yet.");
         }
+
+        _viewFactory.Settings = server.Settings;
         return _viewFactory.CreateServerProfile(server);
     }
 
@@ -150,12 +154,14 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
         string? successColor,
         string? warningColor)
     {
+        var server = await _serverService.GetByIdAsync(guildId);
+        _viewFactory.Settings = server!.Settings;
+
         if (string.IsNullOrEmpty(description) && string.IsNullOrEmpty(generalColor) && string.IsNullOrEmpty(errorColor) && string.IsNullOrEmpty(successColor) && string.IsNullOrEmpty(warningColor) && gmRole is null && adminChannel is null)
         {
             return _viewFactory.CreateNotification(NotificationType.Warning, "Warning: No changes were provided.");
         }
 
-        var server = await _serverService.GetByIdAsync(guildId);
         if (server is null)
         {
             return _viewFactory.CreateNotification(NotificationType.Error, "Error: This server is not set up yet.");
@@ -179,6 +185,8 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
             );
 
             await _serverService.UpdateAsync(updateDto);
+            _viewFactory.Settings = updateDto.Settings;
+            
             return _viewFactory.CreateNotification(NotificationType.Success, "Success: Server settings have been updated.");
         }
         catch (Exception)
