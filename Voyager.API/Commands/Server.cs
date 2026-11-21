@@ -4,8 +4,8 @@ using BusinessLogic.Services.Abstractions;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using Voyager.API.Commands.Autocompletes;
 using Voyager.API.Commands.Handlers;
+using Voyager.API.Enums.Types;
 using Voyager.API.Views;
 
 namespace Voyager.API.Commands;
@@ -71,39 +71,37 @@ public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModul
     }
 
     /// <summary>
-    /// Updates one or more of the server's settings (GM role, admin channel,
-    /// description, or notification palette colors). Shows a warning if no
-    /// options are provided.
+    /// Displays a modal to update the server's settings (description and notification
+    /// palette colors), optionally updating the Game Master role or admin channel.
     /// </summary>
     /// <param name="ctx">The DSharpPlus slash command interaction context.</param>
     /// <param name="gmRole">Optional new Game Master role for the server.</param>
     /// <param name="adminChannel">Optional new Voyager admin channel for the server.</param>
-    /// <param name="description">Optional new description for the server profile card.</param>
-    /// <param name="generalColor">Optional new general palette color name.</param>
-    /// <param name="errorColor">Optional new error notification palette color name.</param>
-    /// <param name="successColor">Optional new success notification palette color name.</param>
-    /// <param name="warningColor">Optional new warning notification palette color name.</param>
+    [SlashCommandPermissions(Permissions.ManageRoles | Permissions.ManageChannels)]
     [SlashCommand("change", "Change the current server settings")]
     public async Task Change(InteractionContext ctx,
         [Option("GMRole", "The GM role to use")] DiscordRole? gmRole = null,
-        [Option("AdminChannel", "The admin channel to use")] DiscordChannel? adminChannel = null,
-        [Option("Description", "The description for the server")] string? description = null,
-        [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("GeneralColor", "The general color for the server", true)] string? generalColor = null,
-        [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("ErrorColor", "The error color for the server", true)] string? errorColor = null,
-        [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("SuccessColor", "The success color for the server", true)] string? successColor = null,
-        [Autocomplete(typeof(ColorAutocompleteProvider))]
-        [Option("WarningColor", "The warning color for the server", true)] string? warningColor = null)
+        [Option("AdminChannel", "The admin channel to use")] DiscordChannel? adminChannel = null)
     {
-        await ctx.DeferAsync(ephemeral: true);
         await using var scope = _scopeFactory.CreateAsyncScope();
-        var handler = CreateHandler(scope.ServiceProvider, true);
+        var serverService = scope.ServiceProvider.GetRequiredService<IServerService>();
+        var enumService = scope.ServiceProvider.GetRequiredService<IEnumService>();
 
-        var message = await handler.ChangeAsync(ctx.Guild.Id,
-            gmRole, adminChannel, description, generalColor, errorColor, successColor, warningColor);
-        await ctx.EditResponseAsync(new DiscordWebhookBuilder(message));
+        var server = await serverService.GetByIdAsync(ctx.Guild.Id);
+        if (server is null)
+        {
+            var viewFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+            var error = viewFactory.CreateNotification(NotificationType.Error, "Error: This server is not set up yet.");
+            await ctx.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(error).AsEphemeral(true));
+            return;
+        }
+
+        var handler = CreateHandler(scope.ServiceProvider, true);
+        var modal = handler.CreateChangeModal(server, gmRole?.Id, adminChannel?.Id);
+
+        await ctx.CreateResponseAsync(InteractionResponseType.Modal, modal);
     }
 
     /// <summary>

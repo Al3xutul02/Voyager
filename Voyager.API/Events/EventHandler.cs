@@ -368,6 +368,10 @@ public static partial class EventHandler
             {
                 await HandleSaveRollModalAsync(args, scope.ServiceProvider);
             }
+            else if (type == InteractionIdType.ServerChangeModal)
+            {
+                await HandleServerChangeModalAsync(args, scope.ServiceProvider);
+            }
             else
             {
                 Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Modal interaction '{customId}' has no registered handler for {type}.");
@@ -408,5 +412,56 @@ public static partial class EventHandler
         await args.Interaction.CreateResponseAsync(
             InteractionResponseType.ChannelMessageWithSource,
             new DiscordInteractionResponseBuilder(message).AsEphemeral(isEphemeral));
+    }
+
+    private static async Task HandleServerChangeModalAsync(ModalSubmitEventArgs args, IServiceProvider services)
+    {
+        var serverService = services.GetRequiredService<IServerService>();
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        if (args.Interaction.Guild is null)
+        {
+            return;
+        }
+
+        ulong guildId = args.Interaction.Guild.Id;
+
+        ulong? gmRoleId = null;
+        ulong? adminChannelId = null;
+        var parts = args.Interaction.Data.CustomId.Split(':');
+        if (parts.Length >= 3)
+        {
+            if (ulong.TryParse(parts[1], out var parsedGm) && parsedGm != 0)
+            {
+                gmRoleId = parsedGm;
+            }
+            if (ulong.TryParse(parts[2], out var parsedAdmin) && parsedAdmin != 0)
+            {
+                adminChannelId = parsedAdmin;
+            }
+        }
+
+        args.Values.TryGetValue("server_description", out string? description);
+        args.Values.TryGetValue("server_general_color", out string? generalColor);
+        args.Values.TryGetValue("server_error_color", out string? errorColor);
+        args.Values.TryGetValue("server_success_color", out string? successColor);
+        args.Values.TryGetValue("server_warning_color", out string? warningColor);
+
+        var viewFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+        var handler = new ServerHandler(serverService, enumService, viewFactory);
+
+        var message = await handler.ChangeAsync(
+            guildId,
+            gmRoleId,
+            adminChannelId,
+            description,
+            generalColor,
+            errorColor,
+            successColor,
+            warningColor);
+
+        await args.Interaction.CreateResponseAsync(
+            InteractionResponseType.ChannelMessageWithSource,
+            new DiscordInteractionResponseBuilder(message).AsEphemeral(true));
     }
 }

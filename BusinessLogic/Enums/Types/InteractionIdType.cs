@@ -42,5 +42,10 @@ public enum InteractionIdType
     /// <summary>
     /// Modal submission custom_id for naming and saving a dice roll configuration.
     /// </summary>
-    SaveRollModal
+    SaveRollModal,
+
+    /// <summary>
+    /// Modal submission custom_id for changing server settings (description, colors).
+    /// </summary>
+    ServerChangeModal
 }

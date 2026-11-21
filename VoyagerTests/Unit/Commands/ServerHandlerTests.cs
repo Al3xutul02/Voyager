@@ -314,4 +314,109 @@ public class ServerHandlerTests
 
         Assert.AreEqual("Error: Something went wrong while updating the server settings.", message.Embeds[0].Title);
     }
+
+    [TestMethod]
+    public async Task ChangeAsync_WhenInvalidColorProvided_ReturnsErrorNotification()
+    {
+        var existing = new ServerReadDto(100, "Absalom", null, 111, 222, new ServerSettings());
+        _serverService.GetByIdAsync(100).Returns(existing);
+
+        var message = await _sut.ChangeAsync(
+            guildId: 100,
+            gmRoleId: null,
+            adminChannelId: null,
+            description: null,
+            generalColor: "NotAValidColor",
+            errorColor: null,
+            successColor: null,
+            warningColor: null);
+
+        Assert.AreEqual("Error: 'NotAValidColor' is not a valid color name.", message.Embeds[0].Title);
+        await _serverService.DidNotReceive().UpdateAsync(Arg.Any<ServerUpdateDto>());
+    }
+
+    [TestMethod]
+    public async Task ChangeAsync_WithUlongOverload_UpdatesServerSuccessfully()
+    {
+        var existing = new ServerReadDto(100, "Absalom", null, 111, 222, new ServerSettings());
+        _serverService.GetByIdAsync(100).Returns(existing);
+
+        var message = await _sut.ChangeAsync(
+            guildId: 100,
+            gmRoleId: 333,
+            adminChannelId: 444,
+            description: "Updated with ulong IDs",
+            generalColor: "Teal",
+            errorColor: null,
+            successColor: null,
+            warningColor: null);
+
+        Assert.AreEqual("Success: Server settings have been updated.", message.Embeds[0].Title);
+        await _serverService.Received(1).UpdateAsync(Arg.Is<ServerUpdateDto>(dto =>
+            dto.Id == 100 &&
+            dto.GMRoleId == 333 &&
+            dto.AdminChannelId == 444 &&
+            dto.Description == "Updated with ulong IDs"));
+    }
+
+    // ---- CreateChangeModal ----------------------------------------------
+
+    [TestMethod]
+    public void CreateChangeModal_ReturnsModalWithPrePopulatedServerValues()
+    {
+        var server = new ServerReadDto(
+            Id: 100,
+            Name: "Test Server",
+            Description: "Current description",
+            GMRoleId: 111,
+            AdminChannelId: 222,
+            Settings: new ServerSettings(
+                Mode: ServerMode.Normal,
+                GeneralColor: Color.Blurple,
+                ErrorColor: Color.DarkRed,
+                SuccessColor: Color.DarkGreen,
+                WarningColor: Color.Gold));
+
+        var modal = _sut.CreateChangeModal(server);
+
+        Assert.AreEqual("Change Server Settings", modal.Title);
+        Assert.AreEqual("serverChangeModal:0:0", modal.CustomId);
+        Assert.HasCount(5, modal.Components);
+
+        var descComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[0]).Components.First();
+        Assert.AreEqual("server_description", descComp.CustomId);
+        Assert.AreEqual("Current description", descComp.Value);
+
+        var generalColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[1]).Components.First();
+        Assert.AreEqual("server_general_color", generalColorComp.CustomId);
+        Assert.AreEqual("Blurple", generalColorComp.Value);
+
+        var errorColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[2]).Components.First();
+        Assert.AreEqual("server_error_color", errorColorComp.CustomId);
+        Assert.AreEqual("DarkRed", errorColorComp.Value);
+
+        var successColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[3]).Components.First();
+        Assert.AreEqual("server_success_color", successColorComp.CustomId);
+        Assert.AreEqual("DarkGreen", successColorComp.Value);
+
+        var warningColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[4]).Components.First();
+        Assert.AreEqual("server_warning_color", warningColorComp.CustomId);
+        Assert.AreEqual("Gold", warningColorComp.Value);
+    }
+
+    [TestMethod]
+    public void CreateChangeModal_WithRoleAndChannel_EncodesIdsInCustomId()
+    {
+        var server = new ServerReadDto(
+            Id: 100,
+            Name: "Test Server",
+            Description: null,
+            GMRoleId: 111,
+            AdminChannelId: 222,
+            Settings: new ServerSettings());
+
+        var modal = _sut.CreateChangeModal(server, gmRoleId: 999, adminChannelId: 888);
+
+        Assert.AreEqual("serverChangeModal:999:888", modal.CustomId);
+    }
 }
