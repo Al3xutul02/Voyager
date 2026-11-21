@@ -1,3 +1,4 @@
+using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
@@ -65,10 +66,14 @@ public class ViewFactory(
     /// </summary>
     /// <param name="userDto">The user whose profile is being rendered.</param>
     /// <param name="callerId">The Discord user ID of the person who invoked the command.</param>
-    public DiscordMessageBuilder CreateUserProfile(UserReadDto userDto, ulong callerId)
+    /// <param name="characters">Optional collection of active characters owned by the user.</param>
+    public DiscordMessageBuilder CreateUserProfile(
+        UserReadDto userDto,
+        ulong callerId,
+        IEnumerable<CharacterReadDto>? characters = null)
     {
         var messageBuilder = new DiscordMessageBuilder()
-            .AddEmbed(Embeds.UserProfile(_enumService, userDto, callerId));
+            .AddEmbed(Embeds.UserProfile(_enumService, userDto, callerId, characters));
 
         if (callerId == userDto.Id)
             messageBuilder.AddComponents(Selects.SwitchProfilePage(_enumService, ProfilePage.Profile));
@@ -77,6 +82,65 @@ public class ViewFactory(
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
 
         return messageBuilder;
+    }
+
+    /// <summary>
+    /// Builds the character sheet message used by <c>/character details</c>:
+    /// attaches the token and actor portrait images, renders the character details embed,
+    /// and appends a "Clear" button when non-ephemeral.
+    /// </summary>
+    /// <param name="character">The character DTO to display.</param>
+    /// <param name="playerName">The username of the owning player.</param>
+    /// <param name="tokenStream">Optional stream for token image.</param>
+    /// <param name="actorStream">Optional stream for actor portrait image.</param>
+    public DiscordMessageBuilder CreateCharacterDetails(
+        CharacterReadDto character,
+        string playerName,
+        Stream? tokenStream = null,
+        Stream? actorStream = null)
+    {
+        var messageBuilder = new DiscordMessageBuilder();
+
+        if (tokenStream is not null)
+        {
+            messageBuilder.AddFile("token.png", tokenStream);
+        }
+
+        if (actorStream is not null)
+        {
+            messageBuilder.AddFile("actor.png", actorStream);
+        }
+
+        messageBuilder.AddEmbed(Embeds.CharacterDetails(
+            _enumService,
+            character,
+            playerName,
+            hasTokenAttachment: tokenStream is not null,
+            hasActorAttachment: actorStream is not null));
+
+        if (!_isEphemeral)
+        {
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+        }
+
+        return messageBuilder;
+    }
+
+    /// <summary>
+    /// Builds the confirmation warning prompt message for <c>/character delete</c>:
+    /// the warning embed plus "Confirm Delete" and "Cancel" buttons restricted to the owner.
+    /// </summary>
+    /// <param name="character">The character to be deleted.</param>
+    /// <param name="callerId">The Discord snowflake ID of the calling user.</param>
+    public DiscordMessageBuilder CreateCharacterDeleteConfirmation(
+        CharacterReadDto character,
+        ulong callerId)
+    {
+        return new DiscordMessageBuilder()
+            .AddEmbed(Embeds.CharacterDeleteConfirmation(_enumService, Settings, character.Name))
+            .AddComponents(
+                Buttons.ConfirmDeleteCharacter(_enumService, character.Id, callerId),
+                Buttons.CancelDeleteCharacter(_enumService, character.Id, callerId));
     }
 
     /// <summary>

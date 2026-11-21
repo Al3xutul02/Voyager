@@ -1,9 +1,11 @@
+using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
 using BusinessLogic.Json.Models;
 using BusinessLogic.Services;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using Voyager.API.Enums.Types;
 using Voyager.API.Views;
@@ -264,5 +266,106 @@ public class ViewFactoryTests
         var nonEphemeralColors = _nonEphemeralSut.CreateServerColors();
         Assert.HasCount(1, nonEphemeralColors.Embeds);
         Assert.HasCount(1, nonEphemeralColors.Components);
+    }
+
+    // ---- Character views ------------------------------------------------
+
+    [TestMethod]
+    public void CreateUserProfile_WithCharacters_FormatsListAsNameAncestryClassLevel()
+    {
+        var userDto = new UserReadDto(
+            123,
+            "Al3x",
+            new UserSettings(Color.Teal, PrivacyOption.Public, PrivacyOption.Public));
+
+        var characters = new List<CharacterReadDto>
+        {
+            new(1, 123, "Sunaki", "Bio", Color.Teal, "token.png", "actor.png", null, 0.3m, "123", new CharacterDetails("Human", "Rogue", "3", "25", "Male")),
+            new(2, 123, "Valeros", "Bio", Color.Blue, "token2.png", "actor2.png", null, 10m, "456", new CharacterDetails("Human", "Fighter", "5", "30", "Male"))
+        };
+
+        var message = _ephemeralSut.CreateUserProfile(userDto, callerId: 123, characters);
+
+        var embed = message.Embeds[0];
+        var charactersField = embed.Fields[1];
+        StringAssert.Contains(charactersField.Value, "• Sunaki (Human Rogue 3)");
+        StringAssert.Contains(charactersField.Value, "• Valeros (Human Fighter 5)");
+    }
+
+    [TestMethod]
+    public void CreateCharacterDetails_RendersAllFieldsAndAttachmentReferences()
+    {
+        var character = new CharacterReadDto(
+            Id: 1,
+            UserId: 123,
+            Name: "Sunaki",
+            Description: "Edward was born in the nation of Ravounel...",
+            Color: Color.Red,
+            TokenImagePath: "token.png",
+            ActorImagePath: "actor.png",
+            CurrentGame: "Test Game",
+            Gold: 0.3m,
+            PathbuilderId: "123456",
+            Details: new CharacterDetails("Human", "Rogue", "3", "25", "Male")
+        );
+
+        using var tokenStream = new MemoryStream([1, 2, 3]);
+        using var actorStream = new MemoryStream([4, 5, 6]);
+
+        var message = _nonEphemeralSut.CreateCharacterDetails(character, "al3xutul02", tokenStream, actorStream);
+
+        Assert.HasCount(1, message.Embeds);
+        var embed = message.Embeds[0];
+        Assert.AreEqual("Human Rogue, Level 3", embed.Author.Name);
+        Assert.AreEqual("Sunaki", embed.Title);
+        Assert.AreEqual("Edward was born in the nation of Ravounel...", embed.Description);
+        Assert.AreEqual("attachment://token.png", embed.Thumbnail.Url?.ToString());
+        Assert.AreEqual("attachment://actor.png", embed.Image.Url?.ToString());
+        Assert.AreEqual("Player: al3xutul02", embed.Footer.Text);
+
+        Assert.AreEqual("Test Game", embed.Fields.Single(f => f.Name == "Current Game").Value);
+        Assert.AreEqual("25", embed.Fields.Single(f => f.Name == "Age").Value);
+        Assert.AreEqual("Male", embed.Fields.Single(f => f.Name == "Gender").Value);
+        Assert.AreEqual("0.3", embed.Fields.Single(f => f.Name == "Gold").Value);
+
+        // Non-ephemeral: Clear button attached
+        Assert.HasCount(1, message.Components);
+    }
+
+    [TestMethod]
+    public void CreateCharacterDeleteConfirmation_RendersWarningAndRestrictedButtons()
+    {
+        var character = new CharacterReadDto(
+            Id: 42,
+            UserId: 100,
+            Name: "Sunaki",
+            Description: null,
+            Color: Color.Teal,
+            TokenImagePath: "token.png",
+            ActorImagePath: "actor.png",
+            CurrentGame: null,
+            Gold: 0m,
+            PathbuilderId: null,
+            Details: new CharacterDetails("Human", "Rogue", "1", "20", "Male")
+        );
+
+        var message = _nonEphemeralSut.CreateCharacterDeleteConfirmation(character, callerId: 100);
+
+        Assert.HasCount(1, message.Embeds);
+        var embed = message.Embeds[0];
+        Assert.AreEqual("Delete Character: Sunaki", embed.Title);
+        StringAssert.Contains(embed.Description, "permanent and irreversible");
+
+        Assert.HasCount(1, message.Components);
+        var row = message.Components[0].Components.ToList();
+        Assert.HasCount(2, row);
+
+        var confirmBtn = (DiscordButtonComponent)row[0];
+        Assert.AreEqual(ButtonStyle.Danger, confirmBtn.Style);
+        Assert.AreEqual("confirmDeleteCharacter:42:100", confirmBtn.CustomId);
+
+        var cancelBtn = (DiscordButtonComponent)row[1];
+        Assert.AreEqual(ButtonStyle.Secondary, cancelBtn.Style);
+        Assert.AreEqual("cancelDeleteCharacter:42:100", cancelBtn.CustomId);
     }
 }
