@@ -24,6 +24,11 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
     /// </summary>
     public DbSet<DiceRoll> DiceRolls { get; set; } = null!;
 
+    /// <summary>
+    /// All user characters. Mapped to the <c>characters</c> table.
+    /// </summary>
+    public DbSet<Character> Characters { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity => {
@@ -119,6 +124,66 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
                   .IsRequired();
             entity.Property(d => d.DeletedAt)
                   .HasColumnType("datetime");
+        });
+
+        modelBuilder.Entity<Character>(entity =>
+        {
+            entity.ToTable("characters");
+            entity.HasKey(c => c.Id);
+
+            entity.Property(c => c.Id)
+                  .ValueGeneratedOnAdd();
+
+            entity.Property(c => c.UserId)
+                  .IsRequired();
+
+            entity.HasOne(c => c.User)
+                  .WithMany(u => u.Characters)
+                  .HasForeignKey(c => c.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(c => c.Name)
+                  .HasMaxLength(100)
+                  .IsRequired();
+
+            entity.Property(c => c.Description)
+                  .HasColumnType("text");
+
+            entity.Property(c => c.Color)
+                  .IsRequired();
+
+            entity.Property(c => c.TokenImagePath)
+                  .HasMaxLength(255)
+                  .IsRequired();
+
+            entity.Property(c => c.ActorImagePath)
+                  .HasMaxLength(255)
+                  .IsRequired();
+
+            entity.Property(c => c.CurrentGame)
+                  .HasMaxLength(100);
+
+            entity.Property(c => c.Gold)
+                  .HasColumnType("decimal(10,2)")
+                  .IsRequired();
+
+            entity.Property(c => c.PathbuilderId)
+                  .HasMaxLength(50);
+
+            entity.Property(c => c.Details)
+                  .HasColumnType("text")
+                  .IsRequired();
+
+            entity.Property(c => c.CreatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(c => c.UpdatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(c => c.DeletedAt)
+                  .HasColumnType("datetime");
+
+            entity.HasIndex(c => new { c.UserId, c.Name });
         });
     }
 }

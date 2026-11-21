@@ -32,7 +32,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore());
+            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore())
+            .ForMember(dest => dest.Characters, opt => opt.Ignore());
 
         CreateMap<User, UserReadDto>()
             .ForCtorParam(nameof(UserReadDto.Settings),
@@ -44,7 +45,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore());
+            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore())
+            .ForMember(dest => dest.Characters, opt => opt.Ignore());
 
         // Servers
         CreateMap<ServerCreateDto, Server>()

@@ -145,6 +145,7 @@ public class Program
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IServerRepository, ServerRepository>();
         builder.Services.AddScoped<IDiceRollRepository, DiceRollRepository>();
+        builder.Services.AddScoped<ICharacterRepository, CharacterRepository>();
 
         var app = builder.Build();
 
