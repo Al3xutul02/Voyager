@@ -140,6 +140,8 @@ public class Program
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IServerService, ServerService>();
         builder.Services.AddScoped<IDiceRollService, DiceRollService>();
+        builder.Services.AddHttpClient<IFileService, FileService>();
+        builder.Services.AddHttpClient<IPathbuilderService, PathbuilderService>();
 
         // Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
