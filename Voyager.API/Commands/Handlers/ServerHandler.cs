@@ -2,6 +2,7 @@
 using BusinessLogic.Enums.Types;
 using BusinessLogic.Json.Models;
 using BusinessLogic.Services.Abstractions;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using Voyager.API.Enums.Types;
 using Voyager.API.Views;
@@ -22,6 +23,35 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
     private readonly IServerService _serverService = serverService;
     private readonly IEnumService _enumService = enumService;
     private readonly ViewFactory _viewFactory = viewFactory;
+
+    /// <summary>
+    /// Comma-separated list of all 42 valid palette colors from <see cref="Color"/>.
+    /// Used for modal reference fields and error notification bodies.
+    /// </summary>
+    public static readonly string AllAvailableColors = string.Join(", ", Enum.GetNames<Color>());
+
+    /// <summary>
+    /// Parses a comma-separated string containing up to four colors (General, Error, Success, Warning).
+    /// </summary>
+    /// <param name="combinedColors">Comma-separated color names (e.g. "Teal, DarkRed, DarkGreen, Orange").</param>
+    /// <returns>A tuple of (General, Error, Success, Warning) color strings.</returns>
+    public static (string? General, string? Error, string? Success, string? Warning) ParseCombinedColors(string? combinedColors)
+    {
+        if (string.IsNullOrWhiteSpace(combinedColors))
+        {
+            return (null, null, null, null);
+        }
+
+        var parts = combinedColors
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        string? general = parts.Length > 0 ? parts[0] : null;
+        string? error = parts.Length > 1 ? parts[1] : null;
+        string? success = parts.Length > 2 ? parts[2] : null;
+        string? warning = parts.Length > 3 ? parts[3] : null;
+
+        return (general, error, success, warning);
+    }
 
     /// <summary>
     /// Builds the response for <c>/server setup</c>: validates ownership and
@@ -103,6 +133,8 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
             await _serverService.CreateAsync(newServer);
             var serverReadDto = await _serverService.GetByIdAsync(newServer.Id);
             await adminChannel!.SendMessageAsync(_viewFactory.CreateServerProfile(serverReadDto!));
+
+            _viewFactory.Settings = serverReadDto!.Settings;
             return _viewFactory.CreateNotification(NotificationType.Success, "Success: Voyager has been set up for this server.");
         }
         catch (Exception)
@@ -123,6 +155,8 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
         {
             return _viewFactory.CreateNotification(NotificationType.Error, "Error: This server is not set up yet.");
         }
+
+        _viewFactory.Settings = server.Settings;
         return _viewFactory.CreateServerProfile(server);
     }
 
@@ -140,7 +174,70 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
     /// <param name="errorColor">Optional new error notification palette color name.</param>
     /// <param name="successColor">Optional new success notification palette color name.</param>
     /// <param name="warningColor">Optional new warning notification palette color name.</param>
-    public async Task<DiscordMessageBuilder> ChangeAsync(
+    /// <summary>
+    /// Builds the Discord Modal response builder for changing server settings,
+    /// pre-populated with the server's current settings, a combined single text
+    /// input for all 4 colors, an in-modal reference list of all available colors,
+    /// and optional pending GM role / admin channel IDs encoded into the custom_id.
+    /// </summary>
+    /// <param name="server">The server's current configuration.</param>
+    /// <param name="gmRoleId">Optional pending new GM role ID.</param>
+    /// <param name="adminChannelId">Optional pending new admin channel ID.</param>
+    public DiscordInteractionResponseBuilder CreateChangeModal(
+        ServerReadDto server,
+        ulong? gmRoleId = null,
+        ulong? adminChannelId = null)
+    {
+        var customId = $"{_enumService.ConvertInteraction(InteractionIdType.ServerChangeModal)}:{gmRoleId?.ToString() ?? "0"}:{adminChannelId?.ToString() ?? "0"}";
+
+        return new DiscordInteractionResponseBuilder()
+            .WithTitle("Change Server Settings")
+            .WithCustomId(customId)
+            .AddComponents(new TextInputComponent(
+                label: "Description",
+                customId: "server_description",
+                placeholder: "Server description for profile card",
+                value: server.Description,
+                required: false,
+                style: TextInputStyle.Paragraph,
+                max_length: 500))
+            .AddComponents(new TextInputComponent(
+                label: "Colors (General, Error, Success, Warning)",
+                customId: "server_colors",
+                placeholder: "e.g. Teal, DarkRed, DarkGreen, Orange",
+                value: $"{server.Settings.GeneralColor}, {server.Settings.ErrorColor}, {server.Settings.SuccessColor}, {server.Settings.WarningColor}",
+                required: false,
+                style: TextInputStyle.Short,
+                max_length: 200))
+            .AddComponents(new TextInputComponent(
+                label: "Available Colors (Reference)",
+                customId: "available_colors_reference",
+                value: AllAvailableColors,
+                required: false,
+                style: TextInputStyle.Paragraph,
+                max_length: 1000));
+    }
+
+    /// <summary>
+    /// Builds the response for <c>/server change</c> when invoked with a single
+    /// combined comma-separated colors string.
+    /// </summary>
+    public Task<DiscordMessageBuilder> ChangeAsync(
+        ulong guildId,
+        ulong? gmRoleId,
+        ulong? adminChannelId,
+        string? description,
+        string? combinedColors)
+    {
+        var (general, error, success, warning) = ParseCombinedColors(combinedColors);
+        return ChangeAsync(guildId, gmRoleId, adminChannelId, description, general, error, success, warning);
+    }
+
+    /// <summary>
+    /// Builds the response for <c>/server change</c> when invoked with <see cref="DiscordRole"/>
+    /// and <see cref="DiscordChannel"/> entities.
+    /// </summary>
+    public Task<DiscordMessageBuilder> ChangeAsync(
         ulong guildId,
         DiscordRole? gmRole,
         DiscordChannel? adminChannel,
@@ -150,7 +247,47 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
         string? successColor,
         string? warningColor)
     {
-        if (string.IsNullOrEmpty(description) && string.IsNullOrEmpty(generalColor) && string.IsNullOrEmpty(errorColor) && string.IsNullOrEmpty(successColor) && string.IsNullOrEmpty(warningColor) && gmRole is null && adminChannel is null)
+        return ChangeAsync(
+            guildId,
+            gmRole?.Id,
+            adminChannel?.Id,
+            description,
+            generalColor,
+            errorColor,
+            successColor,
+            warningColor);
+    }
+
+    /// <summary>
+    /// Builds the response for <c>/server change</c>: updates the server's
+    /// GM role, admin channel, description, and UI palette colors.
+    /// Returns a warning if no settings were provided, or an error if the server is not set up.
+    /// </summary>
+    /// <param name="guildId">The Discord snowflake ID of the guild.</param>
+    /// <param name="gmRoleId">Optional new Game Master role snowflake ID.</param>
+    /// <param name="adminChannelId">Optional new Voyager admin channel snowflake ID.</param>
+    /// <param name="description">Optional new description for the server profile card.</param>
+    /// <param name="generalColor">Optional new general palette color name.</param>
+    /// <param name="errorColor">Optional new error notification palette color name.</param>
+    /// <param name="successColor">Optional new success notification palette color name.</param>
+    /// <param name="warningColor">Optional new warning notification palette color name.</param>
+    public async Task<DiscordMessageBuilder> ChangeAsync(
+        ulong guildId,
+        ulong? gmRoleId,
+        ulong? adminChannelId,
+        string? description,
+        string? generalColor,
+        string? errorColor,
+        string? successColor,
+        string? warningColor)
+    {
+        if (string.IsNullOrEmpty(description) &&
+            string.IsNullOrEmpty(generalColor) &&
+            string.IsNullOrEmpty(errorColor) &&
+            string.IsNullOrEmpty(successColor) &&
+            string.IsNullOrEmpty(warningColor) &&
+            gmRoleId is null &&
+            adminChannelId is null)
         {
             return _viewFactory.CreateNotification(NotificationType.Warning, "Warning: No changes were provided.");
         }
@@ -161,29 +298,78 @@ public class ServerHandler(IServerService serverService, IEnumService enumServic
             return _viewFactory.CreateNotification(NotificationType.Error, "Error: This server is not set up yet.");
         }
 
+        _viewFactory.Settings = server.Settings;
+
+        if (!string.IsNullOrWhiteSpace(generalColor) && !Enum.TryParse<Color>(generalColor.Trim(), ignoreCase: true, out _))
+        {
+            return _viewFactory.CreateNotification(
+                NotificationType.Error,
+                $"Error: '{generalColor}' is not a valid color name.",
+                $"**Available Colors:**\n{AllAvailableColors}");
+        }
+        if (!string.IsNullOrWhiteSpace(errorColor) && !Enum.TryParse<Color>(errorColor.Trim(), ignoreCase: true, out _))
+        {
+            return _viewFactory.CreateNotification(
+                NotificationType.Error,
+                $"Error: '{errorColor}' is not a valid color name.",
+                $"**Available Colors:**\n{AllAvailableColors}");
+        }
+        if (!string.IsNullOrWhiteSpace(successColor) && !Enum.TryParse<Color>(successColor.Trim(), ignoreCase: true, out _))
+        {
+            return _viewFactory.CreateNotification(
+                NotificationType.Error,
+                $"Error: '{successColor}' is not a valid color name.",
+                $"**Available Colors:**\n{AllAvailableColors}");
+        }
+        if (!string.IsNullOrWhiteSpace(warningColor) && !Enum.TryParse<Color>(warningColor.Trim(), ignoreCase: true, out _))
+        {
+            return _viewFactory.CreateNotification(
+                NotificationType.Error,
+                $"Error: '{warningColor}' is not a valid color name.",
+                $"**Available Colors:**\n{AllAvailableColors}");
+        }
+
         try
         {
             var updateDto = new ServerUpdateDto(
                 Id: guildId,
                 Name: server.Name,
-                Description: description ?? server.Description,
-                GMRoleId: gmRole?.Id ?? server.GMRoleId,
-                AdminChannelId: adminChannel?.Id ?? server.AdminChannelId,
+                Description: description != null ? (string.IsNullOrWhiteSpace(description) ? null : description) : server.Description,
+                GMRoleId: gmRoleId ?? server.GMRoleId,
+                AdminChannelId: adminChannelId ?? server.AdminChannelId,
                 Settings: new ServerSettings(
                     Mode: server.Settings.Mode,
-                    GeneralColor: generalColor != null ? _enumService.ConvertColor(generalColor) : server.Settings.GeneralColor,
-                    ErrorColor: errorColor != null ? _enumService.ConvertColor(errorColor) : server.Settings.ErrorColor,
-                    SuccessColor: successColor != null ? _enumService.ConvertColor(successColor) : server.Settings.SuccessColor,
-                    WarningColor: warningColor != null ? _enumService.ConvertColor(warningColor) : server.Settings.WarningColor
+                    GeneralColor: !string.IsNullOrWhiteSpace(generalColor) ? _enumService.ConvertColor(generalColor) : server.Settings.GeneralColor,
+                    ErrorColor: !string.IsNullOrWhiteSpace(errorColor) ? _enumService.ConvertColor(errorColor) : server.Settings.ErrorColor,
+                    SuccessColor: !string.IsNullOrWhiteSpace(successColor) ? _enumService.ConvertColor(successColor) : server.Settings.SuccessColor,
+                    WarningColor: !string.IsNullOrWhiteSpace(warningColor) ? _enumService.ConvertColor(warningColor) : server.Settings.WarningColor
                 )
             );
 
             await _serverService.UpdateAsync(updateDto);
+            _viewFactory.Settings = updateDto.Settings;
+
             return _viewFactory.CreateNotification(NotificationType.Success, "Success: Server settings have been updated.");
         }
         catch (Exception)
         {
             return _viewFactory.CreateNotification(NotificationType.Error, "Error: Something went wrong while updating the server settings.");
         }
+    }
+
+    /// <summary>
+    /// Builds the response for <c>/server colors</c>: returns an ephemeral card
+    /// listing all available palette colors organized by category.
+    /// </summary>
+    /// <param name="guildId">The Discord snowflake ID of the guild.</param>
+    public async Task<DiscordMessageBuilder> ColorsAsync(ulong guildId)
+    {
+        var server = await _serverService.GetByIdAsync(guildId);
+        if (server is not null)
+        {
+            _viewFactory.Settings = server.Settings;
+        }
+
+        return _viewFactory.CreateServerColors();
     }
 }

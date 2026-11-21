@@ -122,6 +122,13 @@ public class EnumServiceTests
     }
 
     [TestMethod]
+    public void ConvertInteraction_WithPayloadColonSuffix_ReturnsBaseType()
+    {
+        Assert.AreEqual(InteractionIdType.ServerChangeModal, _sut.ConvertInteraction("serverChangeModal:111:222"));
+        Assert.AreEqual(InteractionIdType.SaveRollModal, _sut.ConvertInteraction("saveRollModal:extra"));
+    }
+
+    [TestMethod]
     public void ConvertInteraction_UnknownString_ReturnsNone()
     {
         Assert.AreEqual(InteractionIdType.None, _sut.ConvertInteraction("notARealCustomId"));

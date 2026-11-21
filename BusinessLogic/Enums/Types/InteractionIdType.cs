@@ -25,5 +25,27 @@ public enum InteractionIdType
     /// Select-menu on a user's own profile card that switches the displayed
     /// embed between the Profile view and the Settings view.
     /// </summary>
-    SwitchProfilePage
+    SwitchProfilePage,
+
+    /// <summary>
+    /// Button under a dice roll result message that prompts the clicking user
+    /// with a modal to save the dice configuration.
+    /// </summary>
+    SaveRoll,
+
+    /// <summary>
+    /// Button under a dice roll result message that deletes the roll message
+    /// if clicked by the roller, a server GM, or a server Admin/Owner.
+    /// </summary>
+    ClearRoll,
+
+    /// <summary>
+    /// Modal submission custom_id for naming and saving a dice roll configuration.
+    /// </summary>
+    SaveRollModal,
+
+    /// <summary>
+    /// Modal submission custom_id for changing server settings (description, colors).
+    /// </summary>
+    ServerChangeModal
 }

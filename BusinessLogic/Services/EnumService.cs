@@ -84,7 +84,11 @@ public class EnumService : IEnumService
         {
             [InteractionIdType.None]              = "none",
             [InteractionIdType.ClearAlert]        = "clearAlert",
-            [InteractionIdType.SwitchProfilePage] = "switchProfilePage"
+            [InteractionIdType.SwitchProfilePage] = "switchProfilePage",
+            [InteractionIdType.SaveRoll]          = "saveRoll",
+            [InteractionIdType.ClearRoll]         = "clearRoll",
+            [InteractionIdType.SaveRollModal]     = "saveRollModal",
+            [InteractionIdType.ServerChangeModal] = "serverChangeModal"
         }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, InteractionIdType> ReverseInteractionMap =
@@ -105,8 +109,16 @@ public class EnumService : IEnumService
         Palette.TryGetValue(color, out var discordColor) ? discordColor : DiscordColor.Teal;
 
     /// <inheritdoc />
-    public InteractionIdType ConvertInteraction(string interactionId) =>
-        ReverseInteractionMap.TryGetValue(interactionId, out var interactionType) ? interactionType : InteractionIdType.None;
+    public InteractionIdType ConvertInteraction(string interactionId)
+    {
+        if (string.IsNullOrWhiteSpace(interactionId))
+        {
+            return InteractionIdType.None;
+        }
+
+        var prefix = interactionId.Split(':')[0];
+        return ReverseInteractionMap.TryGetValue(prefix, out var interactionType) ? interactionType : InteractionIdType.None;
+    }
 
     /// <inheritdoc />
     public string ConvertInteraction(InteractionIdType interactionType) =>

@@ -7,6 +7,7 @@ using DSharpPlus.EventArgs;
 using Voyager.API.Commands.Handlers;
 using Voyager.API.Enums.Types;
 using Voyager.API.Views;
+using Voyager.API.Views.Components.Embeds;
 
 namespace Voyager.API.Events;
 
@@ -39,7 +40,9 @@ public static partial class EventHandler
             [InteractionIdType.None] = (sender, args, services) =>
                 throw new ArgumentException("Interaction id does not exist"),
             [InteractionIdType.ClearAlert] = ClearAlert,
-            [InteractionIdType.SwitchProfilePage] = SwitchProfilePage
+            [InteractionIdType.SwitchProfilePage] = SwitchProfilePage,
+            [InteractionIdType.SaveRoll] = SaveRoll,
+            [InteractionIdType.ClearRoll] = ClearRoll
         };
 
     /// <summary>
@@ -182,5 +185,296 @@ public static partial class EventHandler
         await args.Interaction.CreateResponseAsync(
             InteractionResponseType.UpdateMessage,
             new DiscordInteractionResponseBuilder(message));
+    }
+
+    /// <summary>
+    /// Evaluates whether a caller is authorized to clear a dice roll message:
+    /// returns <c>true</c> if the caller is the original roller, the guild owner,
+    /// a member with <see cref="Permissions.Administrator"/>, or a member holding
+    /// the server's configured Game Master role (<paramref name="gmRoleId"/>).
+    /// Extracted as a public static method so the authorization logic can be
+    /// unit-tested directly with primitives.
+    /// </summary>
+    /// <param name="callerId">The Discord snowflake ID of the user clicking Clear.</param>
+    /// <param name="rollerId">The Discord snowflake ID of the user who rolled the dice.</param>
+    /// <param name="isServerOwner">Whether the caller is the Discord server owner.</param>
+    /// <param name="isAdmin">Whether the caller has Discord Administrator permissions.</param>
+    /// <param name="gmRoleId">Optional configured GM role ID for the server.</param>
+    /// <param name="callerRoleIds">The Discord role IDs held by the caller in the guild.</param>
+    public static bool CanClearRoll(
+        ulong callerId,
+        ulong rollerId,
+        bool isServerOwner,
+        bool isAdmin,
+        ulong? gmRoleId,
+        IEnumerable<ulong>? callerRoleIds)
+    {
+        if (callerId == rollerId || isServerOwner || isAdmin)
+        {
+            return true;
+        }
+
+        if (gmRoleId.HasValue && callerRoleIds is not null && callerRoleIds.Contains(gmRoleId.Value))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.ClearRoll"/>: allows only the
+    /// person who rolled, a server GM, or a server Admin/Owner to delete the
+    /// dice roll message. Unauthorized callers receive an ephemeral error notification.
+    /// </summary>
+    private static async Task ClearRoll(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var embed = args.Message.Embeds.FirstOrDefault();
+        Embeds.TryExtractRollerIdFromDiceRollEmbed(embed, out ulong rollerId);
+
+        bool isServerOwner = false;
+        bool isAdmin = false;
+        ulong? gmRoleId = null;
+        IEnumerable<ulong>? callerRoleIds = null;
+        ServerSettings serverSettings = new();
+
+        if (args.Guild is not null)
+        {
+            isServerOwner = args.Guild.OwnerId == args.User.Id;
+
+            if (args.User is DiscordMember member || args.Guild.Members.TryGetValue(args.User.Id, out member!))
+            {
+                isAdmin = (member.Permissions & Permissions.Administrator) != 0;
+                callerRoleIds = member.Roles.Select(r => r.Id);
+            }
+
+            var serverService = services.GetRequiredService<IServerService>();
+            var server = await serverService.GetByIdAsync(args.Guild.Id);
+            if (server is not null)
+            {
+                gmRoleId = server.GMRoleId;
+                serverSettings = server.Settings;
+            }
+        }
+
+        if (!CanClearRoll(args.User.Id, rollerId, isServerOwner, isAdmin, gmRoleId, callerRoleIds))
+        {
+            var enumService = services.GetRequiredService<IEnumService>();
+            var viewFactory = new ViewFactory(isEphemeral: true, enumService, serverSettings);
+            var errorNotification = viewFactory.CreateNotification(
+                NotificationType.Error,
+                "Error: Only GMs, admins, or the person who rolled can clear this roll.");
+
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(errorNotification).AsEphemeral(true));
+            return;
+        }
+
+        await args.Message.DeleteAsync();
+    }
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.SaveRoll"/>: extracts the dice
+    /// formula from the roll embed, checks if the user already saved it or reached
+    /// the 25-roll limit, and if valid prompts the user with a modal to name the
+    /// saved dice configuration.
+    /// </summary>
+    private static async Task SaveRoll(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var diceRollService = services.GetRequiredService<IDiceRollService>();
+        var userService = services.GetRequiredService<IUserService>();
+        var serverService = services.GetRequiredService<IServerService>();
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        ServerSettings serverSettings = new();
+        if (args.Guild is not null)
+        {
+            var server = await serverService.GetByIdAsync(args.Guild.Id);
+            if (server is not null)
+            {
+                serverSettings = server.Settings;
+            }
+        }
+
+        bool isEphemeral = args.Guild is not null;
+        var viewFactory = new ViewFactory(isEphemeral, enumService, serverSettings);
+        var handler = new DiceHandler(diceRollService, userService, viewFactory);
+
+        var embed = args.Message.Embeds.FirstOrDefault();
+        string? formula = Embeds.ExtractFormulaFromDiceRollEmbed(embed);
+
+        var validationError = await handler.ValidateCanSaveAsync(args.User.Id, formula);
+        if (validationError is not null)
+        {
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(validationError).AsEphemeral(isEphemeral));
+            return;
+        }
+
+        var modal = new DiscordInteractionResponseBuilder()
+            .WithTitle("Save Dice Configuration")
+            .WithCustomId(enumService.ConvertInteraction(InteractionIdType.SaveRollModal))
+            .AddComponents(new TextInputComponent(
+                label: "Configuration Name",
+                customId: "dice_name",
+                placeholder: "e.g. Fireball Damage",
+                required: true,
+                style: TextInputStyle.Short,
+                min_length: 1,
+                max_length: 100))
+            .AddComponents(new TextInputComponent(
+                label: "Dice Formula",
+                customId: "dice_formula",
+                value: formula,
+                required: true,
+                style: TextInputStyle.Short,
+                min_length: 1,
+                max_length: 200));
+
+        await args.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modal);
+    }
+
+    /// <summary>
+    /// Dispatches modal submission interactions (e.g. <see cref="InteractionIdType.SaveRollModal"/>).
+    /// </summary>
+    public static async Task ModalSubmitted(DiscordClient sender, ModalSubmitEventArgs args)
+    {
+        var customId = args.Interaction.Data.CustomId;
+        await using var scope = _scopeFactory!.CreateAsyncScope();
+
+        InteractionIdType type;
+        try
+        {
+            var enumService = scope.ServiceProvider.GetRequiredService<IEnumService>();
+            type = enumService.ConvertInteraction(customId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Modal interaction '{customId}' failed to parse: {ex}");
+            return;
+        }
+
+        try
+        {
+            if (type == InteractionIdType.SaveRollModal)
+            {
+                await HandleSaveRollModalAsync(args, scope.ServiceProvider);
+            }
+            else if (type == InteractionIdType.ServerChangeModal)
+            {
+                await HandleServerChangeModalAsync(args, scope.ServiceProvider);
+            }
+            else
+            {
+                Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Modal interaction '{customId}' has no registered handler for {type}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Modal interaction '{customId}' errored: {ex}");
+        }
+    }
+
+    private static async Task HandleSaveRollModalAsync(ModalSubmitEventArgs args, IServiceProvider services)
+    {
+        var diceRollService = services.GetRequiredService<IDiceRollService>();
+        var userService = services.GetRequiredService<IUserService>();
+        var serverService = services.GetRequiredService<IServerService>();
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        ServerSettings serverSettings = new();
+        if (args.Interaction.Guild is not null)
+        {
+            var server = await serverService.GetByIdAsync(args.Interaction.Guild.Id);
+            if (server is not null)
+            {
+                serverSettings = server.Settings;
+            }
+        }
+
+        bool isEphemeral = args.Interaction.Guild is not null;
+        var viewFactory = new ViewFactory(isEphemeral, enumService, serverSettings);
+        var handler = new DiceHandler(diceRollService, userService, viewFactory);
+
+        args.Values.TryGetValue("dice_name", out string? name);
+        args.Values.TryGetValue("dice_formula", out string? formula);
+
+        var message = await handler.CreateAsync(args.Interaction.User.Id, name ?? string.Empty, formula ?? string.Empty);
+
+        await args.Interaction.CreateResponseAsync(
+            InteractionResponseType.ChannelMessageWithSource,
+            new DiscordInteractionResponseBuilder(message).AsEphemeral(isEphemeral));
+    }
+
+    private static async Task HandleServerChangeModalAsync(ModalSubmitEventArgs args, IServiceProvider services)
+    {
+        var serverService = services.GetRequiredService<IServerService>();
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        if (args.Interaction.Guild is null)
+        {
+            return;
+        }
+
+        ulong guildId = args.Interaction.Guild.Id;
+
+        ulong? gmRoleId = null;
+        ulong? adminChannelId = null;
+        var parts = args.Interaction.Data.CustomId.Split(':');
+        if (parts.Length >= 3)
+        {
+            if (ulong.TryParse(parts[1], out var parsedGm) && parsedGm != 0)
+            {
+                gmRoleId = parsedGm;
+            }
+            if (ulong.TryParse(parts[2], out var parsedAdmin) && parsedAdmin != 0)
+            {
+                adminChannelId = parsedAdmin;
+            }
+        }
+
+        args.Values.TryGetValue("server_description", out string? description);
+
+        string? generalColor = null;
+        string? errorColor = null;
+        string? successColor = null;
+        string? warningColor = null;
+
+        if (args.Values.TryGetValue("server_colors", out string? combinedColors) && !string.IsNullOrWhiteSpace(combinedColors))
+        {
+            (generalColor, errorColor, successColor, warningColor) = ServerHandler.ParseCombinedColors(combinedColors);
+        }
+        else
+        {
+            args.Values.TryGetValue("server_general_color", out generalColor);
+            args.Values.TryGetValue("server_error_color", out errorColor);
+            args.Values.TryGetValue("server_success_color", out successColor);
+            args.Values.TryGetValue("server_warning_color", out warningColor);
+        }
+
+        var viewFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+        var handler = new ServerHandler(serverService, enumService, viewFactory);
+
+        var message = await handler.ChangeAsync(
+            guildId,
+            gmRoleId,
+            adminChannelId,
+            description,
+            generalColor,
+            errorColor,
+            successColor,
+            warningColor);
+
+        await args.Interaction.CreateResponseAsync(
+            InteractionResponseType.ChannelMessageWithSource,
+            new DiscordInteractionResponseBuilder(message).AsEphemeral(true));
     }
 }

@@ -1,3 +1,4 @@
+using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
@@ -203,5 +204,65 @@ public class ViewFactoryTests
         Assert.AreEqual(DiscordColor.Blurple.Value, embed.Color.Value.Value);
         Assert.AreEqual("Server Mode: Normal", embed.Footer.Text);
         Assert.IsEmpty(message.Components);
+    }
+
+    // ---- CreateDiceRoll & CreateDiceGuide -------------------------------
+
+    [TestMethod]
+    public void CreateDiceRoll_AttachesDiceRollEmbedAndSaveAndClearButtons()
+    {
+        var term = new DiceTermResultDto("2d6", true, 1, [new RolledDieDto(4, true), new RolledDieDto(6, true)], 10, 2, 12, 7.0, 5.833);
+        var section = new DiceSectionResultDto("(2d6)[fire]", "fire", [term], 10, 2, 12, 7.0, 5.833, 2.415);
+        var tagSummary = new DiceTagSummaryDto("fire", 10, 2, 12, 7.0, 2.415);
+        var eval = new DiceEvaluationResultDto("(2d6)[fire]", null, [section], [tagSummary], 10, 2, 12, 7.0, 2.415);
+
+        var message = _nonEphemeralSut.CreateDiceRoll(55, "Seoni", eval, Color.Red, "Scorching Ray");
+
+        Assert.HasCount(1, message.Embeds);
+        Assert.AreEqual("Seoni's Roll — Scorching Ray", message.Embeds[0].Title);
+        Assert.AreEqual(DiscordColor.Red.Value, message.Embeds[0].Color.Value.Value);
+        Assert.AreEqual("Roller ID: 55", message.Embeds[0].Footer.Text);
+
+        Assert.HasCount(1, message.Components);
+        var buttons = message.Components[0].Components.Cast<DiscordButtonComponent>().ToList();
+        Assert.HasCount(2, buttons);
+        Assert.AreEqual("saveRoll", buttons[0].CustomId);
+        Assert.AreEqual("clearRoll", buttons[1].CustomId);
+    }
+
+    [TestMethod]
+    public void CreateDiceGuide_EphemeralAndNonEphemeral_RendersGuideAndRespectsClearButtonRule()
+    {
+        var ephemeralGuide = _ephemeralSut.CreateDiceGuide();
+        Assert.HasCount(1, ephemeralGuide.Embeds);
+        StringAssert.Contains(ephemeralGuide.Embeds[0].Title, "Dice Roll Guide");
+        Assert.IsEmpty(ephemeralGuide.Components);
+
+        var nonEphemeralGuide = _nonEphemeralSut.CreateDiceGuide();
+        Assert.HasCount(1, nonEphemeralGuide.Embeds);
+        Assert.HasCount(1, nonEphemeralGuide.Components);
+    }
+
+    [TestMethod]
+    public void CreateNotification_WithDescription_SetsEmbedDescription()
+    {
+        var message = _ephemeralSut.CreateNotification(NotificationType.Error, "Error title", "Detailed description");
+        Assert.AreEqual("Error title", message.Embeds[0].Title);
+        Assert.AreEqual("Detailed description", message.Embeds[0].Description);
+    }
+
+    [TestMethod]
+    public void CreateServerColors_EphemeralAndNonEphemeral_RendersColorsAndRespectsClearButtonRule()
+    {
+        var ephemeralColors = _ephemeralSut.CreateServerColors();
+        Assert.HasCount(1, ephemeralColors.Embeds);
+        var embed = ephemeralColors.Embeds[0];
+        Assert.AreEqual("🎨 Voyager Palette Colors", embed.Title);
+        Assert.HasCount(6, embed.Fields);
+        Assert.IsEmpty(ephemeralColors.Components);
+
+        var nonEphemeralColors = _nonEphemeralSut.CreateServerColors();
+        Assert.HasCount(1, nonEphemeralColors.Embeds);
+        Assert.HasCount(1, nonEphemeralColors.Components);
     }
 }
