@@ -242,4 +242,27 @@ public class ViewFactoryTests
         Assert.HasCount(1, nonEphemeralGuide.Embeds);
         Assert.HasCount(1, nonEphemeralGuide.Components);
     }
+
+    [TestMethod]
+    public void CreateNotification_WithDescription_SetsEmbedDescription()
+    {
+        var message = _ephemeralSut.CreateNotification(NotificationType.Error, "Error title", "Detailed description");
+        Assert.AreEqual("Error title", message.Embeds[0].Title);
+        Assert.AreEqual("Detailed description", message.Embeds[0].Description);
+    }
+
+    [TestMethod]
+    public void CreateServerColors_EphemeralAndNonEphemeral_RendersColorsAndRespectsClearButtonRule()
+    {
+        var ephemeralColors = _ephemeralSut.CreateServerColors();
+        Assert.HasCount(1, ephemeralColors.Embeds);
+        var embed = ephemeralColors.Embeds[0];
+        Assert.AreEqual("🎨 Voyager Palette Colors", embed.Title);
+        Assert.HasCount(6, embed.Fields);
+        Assert.IsEmpty(ephemeralColors.Components);
+
+        var nonEphemeralColors = _nonEphemeralSut.CreateServerColors();
+        Assert.HasCount(1, nonEphemeralColors.Embeds);
+        Assert.HasCount(1, nonEphemeralColors.Components);
+    }
 }

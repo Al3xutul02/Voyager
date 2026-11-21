@@ -442,10 +442,23 @@ public static partial class EventHandler
         }
 
         args.Values.TryGetValue("server_description", out string? description);
-        args.Values.TryGetValue("server_general_color", out string? generalColor);
-        args.Values.TryGetValue("server_error_color", out string? errorColor);
-        args.Values.TryGetValue("server_success_color", out string? successColor);
-        args.Values.TryGetValue("server_warning_color", out string? warningColor);
+
+        string? generalColor = null;
+        string? errorColor = null;
+        string? successColor = null;
+        string? warningColor = null;
+
+        if (args.Values.TryGetValue("server_colors", out string? combinedColors) && !string.IsNullOrWhiteSpace(combinedColors))
+        {
+            (generalColor, errorColor, successColor, warningColor) = ServerHandler.ParseCombinedColors(combinedColors);
+        }
+        else
+        {
+            args.Values.TryGetValue("server_general_color", out generalColor);
+            args.Values.TryGetValue("server_error_color", out errorColor);
+            args.Values.TryGetValue("server_success_color", out successColor);
+            args.Values.TryGetValue("server_warning_color", out warningColor);
+        }
 
         var viewFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
         var handler = new ServerHandler(serverService, enumService, viewFactory);

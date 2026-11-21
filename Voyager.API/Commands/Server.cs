@@ -71,6 +71,21 @@ public class Server(IServiceScopeFactory scopeFactory) : ApplicationCommandModul
     }
 
     /// <summary>
+    /// Displays all available palette colors supported by Voyager.
+    /// </summary>
+    /// <param name="ctx">The DSharpPlus slash command interaction context.</param>
+    [SlashCommand("colors", "View all available palette colors supported by Voyager")]
+    public async Task Colors(InteractionContext ctx)
+    {
+        await ctx.DeferAsync(ephemeral: true);
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var handler = CreateHandler(scope.ServiceProvider, true);
+
+        var message = await handler.ColorsAsync(ctx.Guild.Id);
+        await ctx.EditResponseAsync(new DiscordWebhookBuilder(message));
+    }
+
+    /// <summary>
     /// Displays a modal to update the server's settings (description and notification
     /// palette colors), optionally updating the Game Master role or admin channel.
     /// </summary>

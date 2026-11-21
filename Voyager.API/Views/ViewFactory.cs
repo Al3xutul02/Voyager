@@ -41,15 +41,16 @@ public class ViewFactory(
     private readonly IEnumService _enumService = enumService;
 
     /// <summary>
-    /// Builds a notification message: a colored embed plus a "Clear"
-    /// dismissal button when non-ephemeral.
+    /// Builds a notification message: a colored embed plus an optional body
+    /// description and a "Clear" dismissal button when non-ephemeral.
     /// </summary>
     /// <param name="notificationType">Picks which color from <see cref="ServerSettings"/> is used.</param>
     /// <param name="message">Text rendered as the embed title.</param>
-    public DiscordMessageBuilder CreateNotification(NotificationType notificationType, string message)
+    /// <param name="description">Optional detailed text rendered in the embed description body.</param>
+    public DiscordMessageBuilder CreateNotification(NotificationType notificationType, string message, string? description = null)
     {
         var messageBuilder = new DiscordMessageBuilder()
-            .AddEmbed(Embeds.Notification(_enumService, Settings, notificationType, message));
+            .AddEmbed(Embeds.Notification(_enumService, Settings, notificationType, message, description));
 
         if (!_isEphemeral)
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear this notification"));
@@ -146,6 +147,21 @@ public class ViewFactory(
     {
         var messageBuilder = new DiscordMessageBuilder()
             .AddEmbed(Embeds.DiceGuide(_enumService, Settings));
+
+        if (!_isEphemeral)
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+
+        return messageBuilder;
+    }
+
+    /// <summary>
+    /// Builds the palette colors reference message used by <c>/server colors</c>:
+    /// the colors embed plus a "Clear" dismissal button when non-ephemeral.
+    /// </summary>
+    public DiscordMessageBuilder CreateServerColors()
+    {
+        var messageBuilder = new DiscordMessageBuilder()
+            .AddEmbed(Embeds.ServerColors(_enumService, Settings));
 
         if (!_isEphemeral)
             messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));

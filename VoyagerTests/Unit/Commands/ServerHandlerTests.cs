@@ -332,6 +332,9 @@ public class ServerHandlerTests
             warningColor: null);
 
         Assert.AreEqual("Error: 'NotAValidColor' is not a valid color name.", message.Embeds[0].Title);
+        Assert.IsNotNull(message.Embeds[0].Description);
+        StringAssert.Contains(message.Embeds[0].Description, "Aquamarine");
+        StringAssert.Contains(message.Embeds[0].Description, "Teal");
         await _serverService.DidNotReceive().UpdateAsync(Arg.Any<ServerUpdateDto>());
     }
 
@@ -359,6 +362,88 @@ public class ServerHandlerTests
             dto.Description == "Updated with ulong IDs"));
     }
 
+    [TestMethod]
+    public async Task ChangeAsync_WithCombinedColorsOverload_UpdatesServerSuccessfully()
+    {
+        var existing = new ServerReadDto(100, "Absalom", null, 111, 222, new ServerSettings());
+        _serverService.GetByIdAsync(100).Returns(existing);
+
+        var message = await _sut.ChangeAsync(
+            guildId: 100,
+            gmRoleId: null,
+            adminChannelId: null,
+            description: "Combined colors update",
+            combinedColors: "Blurple, Red, Green, Gold");
+
+        Assert.AreEqual("Success: Server settings have been updated.", message.Embeds[0].Title);
+        await _serverService.Received(1).UpdateAsync(Arg.Is<ServerUpdateDto>(dto =>
+            dto.Id == 100 &&
+            dto.Settings.GeneralColor == Color.Blurple &&
+            dto.Settings.ErrorColor == Color.Red &&
+            dto.Settings.SuccessColor == Color.Green &&
+            dto.Settings.WarningColor == Color.Gold));
+    }
+
+    // ---- ParseCombinedColors --------------------------------------------
+
+    [TestMethod]
+    public void ParseCombinedColors_NullOrEmpty_ReturnsAllNulls()
+    {
+        var (g1, e1, s1, w1) = ServerHandler.ParseCombinedColors(null);
+        Assert.IsNull(g1); Assert.IsNull(e1); Assert.IsNull(s1); Assert.IsNull(w1);
+
+        var (g2, e2, s2, w2) = ServerHandler.ParseCombinedColors("   ");
+        Assert.IsNull(g2); Assert.IsNull(e2); Assert.IsNull(s2); Assert.IsNull(w2);
+    }
+
+    [TestMethod]
+    public void ParseCombinedColors_SingleColor_SetsGeneralOnly()
+    {
+        var (general, error, success, warning) = ServerHandler.ParseCombinedColors("Blurple");
+        Assert.AreEqual("Blurple", general);
+        Assert.IsNull(error);
+        Assert.IsNull(success);
+        Assert.IsNull(warning);
+    }
+
+    [TestMethod]
+    public void ParseCombinedColors_FourColorsWithSpaces_TrimsAndAssignsAll()
+    {
+        var (general, error, success, warning) = ServerHandler.ParseCombinedColors("  Teal ,  DarkRed , DarkGreen ,  Orange  ");
+        Assert.AreEqual("Teal", general);
+        Assert.AreEqual("DarkRed", error);
+        Assert.AreEqual("DarkGreen", success);
+        Assert.AreEqual("Orange", warning);
+    }
+
+    // ---- ColorsAsync ----------------------------------------------------
+
+    [TestMethod]
+    public async Task ColorsAsync_WhenServerExists_UsesServerGeneralColor()
+    {
+        var existing = new ServerReadDto(100, "Absalom", null, 111, 222, new ServerSettings(GeneralColor: Color.Blurple));
+        _serverService.GetByIdAsync(100).Returns(existing);
+
+        var message = await _sut.ColorsAsync(100);
+
+        Assert.HasCount(1, message.Embeds);
+        var embed = message.Embeds[0];
+        Assert.AreEqual("🎨 Voyager Palette Colors", embed.Title);
+        Assert.AreEqual(new EnumService().ConvertColor(Color.Blurple).Value, embed.Color!.Value.Value);
+        Assert.HasCount(6, embed.Fields);
+    }
+
+    [TestMethod]
+    public async Task ColorsAsync_WhenServerMissing_UsesDefaultSettings()
+    {
+        _serverService.GetByIdAsync(100).Returns((ServerReadDto?)null);
+
+        var message = await _sut.ColorsAsync(100);
+
+        Assert.HasCount(1, message.Embeds);
+        Assert.AreEqual("🎨 Voyager Palette Colors", message.Embeds[0].Title);
+    }
+
     // ---- CreateChangeModal ----------------------------------------------
 
     [TestMethod]
@@ -381,27 +466,20 @@ public class ServerHandlerTests
 
         Assert.AreEqual("Change Server Settings", modal.Title);
         Assert.AreEqual("serverChangeModal:0:0", modal.CustomId);
-        Assert.HasCount(5, modal.Components);
+        Assert.HasCount(3, modal.Components);
 
         var descComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[0]).Components.First();
         Assert.AreEqual("server_description", descComp.CustomId);
         Assert.AreEqual("Current description", descComp.Value);
 
-        var generalColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[1]).Components.First();
-        Assert.AreEqual("server_general_color", generalColorComp.CustomId);
-        Assert.AreEqual("Blurple", generalColorComp.Value);
+        var colorsComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[1]).Components.First();
+        Assert.AreEqual("server_colors", colorsComp.CustomId);
+        Assert.AreEqual("Blurple, DarkRed, DarkGreen, Gold", colorsComp.Value);
 
-        var errorColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[2]).Components.First();
-        Assert.AreEqual("server_error_color", errorColorComp.CustomId);
-        Assert.AreEqual("DarkRed", errorColorComp.Value);
-
-        var successColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[3]).Components.First();
-        Assert.AreEqual("server_success_color", successColorComp.CustomId);
-        Assert.AreEqual("DarkGreen", successColorComp.Value);
-
-        var warningColorComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[4]).Components.First();
-        Assert.AreEqual("server_warning_color", warningColorComp.CustomId);
-        Assert.AreEqual("Gold", warningColorComp.Value);
+        var refComp = (TextInputComponent)((DiscordActionRowComponent)modal.Components[2]).Components.First();
+        Assert.AreEqual("available_colors_reference", refComp.CustomId);
+        StringAssert.Contains(refComp.Value, "Aquamarine");
+        StringAssert.Contains(refComp.Value, "Teal");
     }
 
     [TestMethod]
