@@ -11,5 +11,5 @@ public record PathbuilderCharacterDto(
     string Age,
     string Gender,
     decimal Gold,
-    string PathbuilderId
+    string? PathbuilderId = null
 );

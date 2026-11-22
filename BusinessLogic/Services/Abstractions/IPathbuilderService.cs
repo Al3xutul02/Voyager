@@ -18,6 +18,26 @@ public interface IPathbuilderService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Fetches and parses a Pathbuilder 2e exported JSON file from a remote URL (e.g. Discord attachment URL).
+    /// </summary>
+    /// <param name="jsonFileUrl">The remote download URL of the exported JSON file.</param>
+    /// <param name="pathbuilderId">Optional Pathbuilder export ID to associate with the parsed character.</param>
+    /// <param name="cancellationToken">Optional cancellation token.</param>
+    /// <returns>A populated <see cref="PathbuilderCharacterDto"/> if valid; otherwise <c>null</c>.</returns>
+    public Task<PathbuilderCharacterDto?> FetchCharacterFromUrlAsync(
+        string jsonFileUrl,
+        string? pathbuilderId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Parses a raw Pathbuilder 2e export JSON string into a <see cref="PathbuilderCharacterDto"/>.
+    /// </summary>
+    /// <param name="json">The raw JSON content.</param>
+    /// <param name="pathbuilderId">Optional Pathbuilder export ID to associate with the parsed character.</param>
+    /// <returns>A populated <see cref="PathbuilderCharacterDto"/> if valid; otherwise <c>null</c>.</returns>
+    public PathbuilderCharacterDto? ParseCharacterJson(string json, string? pathbuilderId = null);
+
+    /// <summary>
     /// Sanitizes an input string to extract the raw Pathbuilder export ID.
     /// </summary>
     /// <param name="input">The raw user input string.</param>

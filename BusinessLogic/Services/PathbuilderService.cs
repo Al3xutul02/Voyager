@@ -37,11 +37,52 @@ public class PathbuilderService(HttpClient httpClient) : IPathbuilderService
             }
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(json))
+            return ParseCharacterJson(json, sanitizedId);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<PathbuilderCharacterDto?> FetchCharacterFromUrlAsync(
+        string jsonFileUrl,
+        string? pathbuilderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(jsonFileUrl))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(jsonFileUrl.Trim(), cancellationToken);
+            if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
 
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ParseCharacterJson(json, pathbuilderId);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public PathbuilderCharacterDto? ParseCharacterJson(string json, string? pathbuilderId = null)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
             var exportData = JsonConvert.DeserializeObject<PathbuilderExportResponse>(json, VoyagerJsonSettings.Default);
             if (exportData is null || !exportData.Success || exportData.Build is null)
             {
@@ -66,7 +107,7 @@ public class PathbuilderService(HttpClient httpClient) : IPathbuilderService
                 Age: string.IsNullOrWhiteSpace(build.Age?.ToString()) ? "Unknown" : build.Age!.ToString()!.Trim(),
                 Gender: string.IsNullOrWhiteSpace(build.Gender) ? "Unknown" : build.Gender.Trim(),
                 Gold: totalGold,
-                PathbuilderId: sanitizedId
+                PathbuilderId: string.IsNullOrWhiteSpace(pathbuilderId) ? null : pathbuilderId.Trim()
             );
         }
         catch (Exception)

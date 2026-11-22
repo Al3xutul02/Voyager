@@ -18,11 +18,17 @@ namespace Voyager.API.Commands.Handlers;
 /// <param name="userService">Source of user data.</param>
 /// <param name="enumService">Converts color names and interaction IDs.</param>
 /// <param name="viewFactory">Builds the Discord message for the response.</param>
-public class ProfileHandler(IUserService userService, IEnumService enumService, ViewFactory viewFactory)
+/// <param name="characterService">Optional source of user characters.</param>
+public class ProfileHandler(
+    IUserService userService,
+    IEnumService enumService,
+    ViewFactory viewFactory,
+    ICharacterService? characterService = null)
 {
     private readonly IUserService _userService = userService;
     private readonly IEnumService _enumService = enumService;
     private readonly ViewFactory _viewFactory = viewFactory;
+    private readonly ICharacterService? _characterService = characterService;
 
     /// <summary>
     /// Builds the response for <c>/profile view</c>: the user's profile card
@@ -34,10 +40,16 @@ public class ProfileHandler(IUserService userService, IEnumService enumService, 
     public async Task<DiscordMessageBuilder> ViewAsync(ulong userId, ulong callerId)
     {
         var result = await _userService.GetByIdAsync(userId);
+        if (result is null)
+        {
+            return _viewFactory.CreateNotification(NotificationType.Error, "Error: User not found.");
+        }
 
-        return result is null
-            ? _viewFactory.CreateNotification(NotificationType.Error, "Error: User not found.")
-            : _viewFactory.CreateUserProfile(result, callerId);
+        var characters = _characterService is not null
+            ? (await _characterService.GetByUserIdAsync(userId)).ToList()
+            : null;
+
+        return _viewFactory.CreateUserProfile(result, callerId, characters);
     }
 
     /// <summary>

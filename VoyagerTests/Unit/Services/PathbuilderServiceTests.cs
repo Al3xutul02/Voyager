@@ -173,6 +173,81 @@ public class PathbuilderServiceTests
         Assert.IsNull(character);
     }
 
+    [TestMethod]
+    public void ParseCharacterJson_WithExportedCharacterJsonFile_ParsesAllFieldsAndGold()
+    {
+        var sampleJson = """
+        {
+            "success": true,
+            "build": {
+                "name": "Edward \"Archer\" Callahan",
+                "class": "Gunslinger",
+                "dualClass": null,
+                "level": 5,
+                "xp": 0,
+                "ancestry": "Human",
+                "heritage": "Versatile Human",
+                "background": "Hired Killer",
+                "alignment": "LG",
+                "gender": "Male",
+                "age": "19",
+                "deity": "Iomedae",
+                "money": { "cp": 0, "sp": 6, "gp": 8, "pp": 0 }
+            }
+        }
+        """;
+
+        using var client = new HttpClient();
+        var service = new PathbuilderService(client);
+
+        var character = service.ParseCharacterJson(sampleJson);
+
+        Assert.IsNotNull(character);
+        Assert.AreEqual("Edward \"Archer\" Callahan", character!.Name);
+        Assert.AreEqual("Human", character.Ancestry);
+        Assert.AreEqual("Gunslinger", character.Class);
+        Assert.AreEqual("5", character.Level);
+        Assert.AreEqual("19", character.Age);
+        Assert.AreEqual("Male", character.Gender);
+        Assert.AreEqual(8.6m, character.Gold);
+        Assert.IsNull(character.PathbuilderId);
+    }
+
+    [TestMethod]
+    public async Task FetchCharacterFromUrlAsync_WhenValidJsonAttachment_ReturnsParsedDto()
+    {
+        var sampleJson = """
+        {
+            "success": true,
+            "build": {
+                "name": "Edward \"Archer\" Callahan",
+                "class": "Gunslinger",
+                "level": 5,
+                "ancestry": "Human",
+                "gender": "Male",
+                "age": "19",
+                "money": { "cp": 0, "sp": 6, "gp": 8, "pp": 0 }
+            }
+        }
+        """;
+
+        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(sampleJson)
+        });
+
+        using var client = new HttpClient(handler);
+        var service = new PathbuilderService(client);
+
+        var character = await service.FetchCharacterFromUrlAsync("https://cdn.discordapp.com/attachments/1/2/character.json", "306825");
+
+        Assert.IsNotNull(character);
+        Assert.AreEqual("Edward \"Archer\" Callahan", character!.Name);
+        Assert.AreEqual("Gunslinger", character.Class);
+        Assert.AreEqual(8.6m, character.Gold);
+        Assert.AreEqual("306825", character.PathbuilderId);
+    }
+
     private class MockHttpMessageHandler(HttpResponseMessage response) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>

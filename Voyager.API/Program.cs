@@ -141,8 +141,17 @@ public class Program
         builder.Services.AddScoped<IServerService, ServerService>();
         builder.Services.AddScoped<IDiceRollService, DiceRollService>();
         builder.Services.AddScoped<ICharacterService, CharacterService>();
-        builder.Services.AddHttpClient<IFileService, FileService>();
-        builder.Services.AddHttpClient<IPathbuilderService, PathbuilderService>();
+        builder.Services.AddHttpClient<IFileService, FileService>(client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+        });
+        builder.Services.AddHttpClient<IPathbuilderService, PathbuilderService>(client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json, text/plain, */*");
+        });
 
         // Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
