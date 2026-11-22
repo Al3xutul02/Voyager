@@ -103,12 +103,13 @@ public class Profile(IServiceScopeFactory scopeFactory) : ApplicationCommandModu
     private static ProfileHandler CreateHandler(IServiceProvider services, bool isEphemeral)
     {
         var userService = services.GetRequiredService<IUserService>();
+        var characterService = services.GetRequiredService<ICharacterService>();
         var enumService = services.GetRequiredService<IEnumService>();
 
         // The command stays a thin adapter: it only translates the Discord
         // interaction into primitives and hands off to ProfileHandler, which
         // holds the testable logic.
         var viewFactory = new ViewFactory(isEphemeral, enumService, new ServerSettings());
-        return new ProfileHandler(userService, enumService, viewFactory);
+        return new ProfileHandler(userService, enumService, viewFactory, characterService);
     }
 }

@@ -42,4 +42,9 @@ public class User
     /// Saved dice roll configurations belonging to this user.
     /// </summary>
     public ICollection<DiceRoll> DiceRolls { get; set; } = [];
+
+    /// <summary>
+    /// Characters belonging to this user.
+    /// </summary>
+    public ICollection<Character> Characters { get; set; } = [];
 }

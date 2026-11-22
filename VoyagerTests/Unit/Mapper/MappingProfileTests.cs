@@ -1,4 +1,5 @@
 using AutoMapper;
+using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
@@ -231,5 +232,115 @@ public class MappingProfileTests
         Assert.AreEqual(42UL, entity.UserId);
         Assert.AreEqual("Longsword +1", entity.Name);
         Assert.AreEqual("2d8+4", entity.Formula);
+    }
+
+    // ---- Character mappings ---------------------------------------------
+
+    [TestMethod]
+    public void Map_CharacterToCharacterReadDto_DeserializesDetailsAndMapsColor()
+    {
+        var detailsJson = JsonConvert.SerializeObject(
+            new CharacterDetails("Human", "Rogue", "3", "25", "Male"),
+            VoyagerJsonSettings.Default);
+
+        var entity = new Character
+        {
+            Id = 1,
+            UserId = 12345,
+            Name = "Sunaki",
+            Description = "Born in Ravounel",
+            Color = (int)Color.Red,
+            TokenImagePath = "characters/12345/1/token.png",
+            ActorImagePath = "characters/12345/1/actor.png",
+            CurrentGame = "Test Game",
+            Gold = 0.3m,
+            PathbuilderId = "999888",
+            Details = detailsJson
+        };
+
+        var dto = _mapper.Map<CharacterReadDto>(entity);
+
+        Assert.AreEqual(1UL, dto.Id);
+        Assert.AreEqual(12345UL, dto.UserId);
+        Assert.AreEqual("Sunaki", dto.Name);
+        Assert.AreEqual("Born in Ravounel", dto.Description);
+        Assert.AreEqual(Color.Red, dto.Color);
+        Assert.AreEqual("characters/12345/1/token.png", dto.TokenImagePath);
+        Assert.AreEqual("characters/12345/1/actor.png", dto.ActorImagePath);
+        Assert.AreEqual("Test Game", dto.CurrentGame);
+        Assert.AreEqual(0.3m, dto.Gold);
+        Assert.AreEqual("999888", dto.PathbuilderId);
+        Assert.IsNotNull(dto.Details);
+        Assert.AreEqual("Human", dto.Details.Ancestry);
+        Assert.AreEqual("Rogue", dto.Details.Class);
+        Assert.AreEqual("3", dto.Details.Level);
+        Assert.AreEqual("25", dto.Details.Age);
+        Assert.AreEqual("Male", dto.Details.Gender);
+    }
+
+    [TestMethod]
+    public void Map_CharacterCreateDtoToCharacter_SerializesDetailsAndMapsColor()
+    {
+        var createDto = new CharacterCreateDto(
+            UserId: 12345,
+            Name: "Valeros",
+            Description: "Iconic fighter",
+            Color: Color.Blue,
+            TokenImagePath: "characters/12345/2/token.png",
+            ActorImagePath: "characters/12345/2/actor.png",
+            CurrentGame: null,
+            Gold: 15.5m,
+            PathbuilderId: "123456",
+            Details: new CharacterDetails("Human", "Fighter", "1", "30", "Male")
+        );
+
+        var entity = _mapper.Map<Character>(createDto);
+
+        Assert.AreEqual(12345UL, entity.UserId);
+        Assert.AreEqual("Valeros", entity.Name);
+        Assert.AreEqual("Iconic fighter", entity.Description);
+        Assert.AreEqual((int)Color.Blue, entity.Color);
+        Assert.AreEqual("characters/12345/2/token.png", entity.TokenImagePath);
+        Assert.AreEqual("characters/12345/2/actor.png", entity.ActorImagePath);
+        Assert.IsNull(entity.CurrentGame);
+        Assert.AreEqual(15.5m, entity.Gold);
+        Assert.AreEqual("123456", entity.PathbuilderId);
+
+        var details = JsonConvert.DeserializeObject<CharacterDetails>(entity.Details, VoyagerJsonSettings.Default);
+        Assert.IsNotNull(details);
+        Assert.AreEqual("Human", details!.Ancestry);
+        Assert.AreEqual("Fighter", details.Class);
+    }
+
+    [TestMethod]
+    public void Map_CharacterUpdateDtoToCharacter_SerializesDetailsAndMapsColor()
+    {
+        var updateDto = new CharacterUpdateDto(
+            Id: 5,
+            UserId: 12345,
+            Name: "Valeros Updated",
+            Description: "Veteran fighter",
+            Color: Color.Gold,
+            TokenImagePath: "characters/12345/5/token.png",
+            ActorImagePath: "characters/12345/5/actor.png",
+            CurrentGame: "Active Game",
+            Gold: 25.0m,
+            PathbuilderId: "123456",
+            Details: new CharacterDetails("Human", "Fighter", "2", "31", "Male")
+        );
+
+        var entity = _mapper.Map<Character>(updateDto);
+
+        Assert.AreEqual(5UL, entity.Id);
+        Assert.AreEqual(12345UL, entity.UserId);
+        Assert.AreEqual("Valeros Updated", entity.Name);
+        Assert.AreEqual("Veteran fighter", entity.Description);
+        Assert.AreEqual((int)Color.Gold, entity.Color);
+        Assert.AreEqual("Active Game", entity.CurrentGame);
+        Assert.AreEqual(25.0m, entity.Gold);
+
+        var details = JsonConvert.DeserializeObject<CharacterDetails>(entity.Details, VoyagerJsonSettings.Default);
+        Assert.IsNotNull(details);
+        Assert.AreEqual("2", details!.Level);
     }
 }

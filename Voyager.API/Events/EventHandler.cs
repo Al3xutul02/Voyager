@@ -42,7 +42,9 @@ public static partial class EventHandler
             [InteractionIdType.ClearAlert] = ClearAlert,
             [InteractionIdType.SwitchProfilePage] = SwitchProfilePage,
             [InteractionIdType.SaveRoll] = SaveRoll,
-            [InteractionIdType.ClearRoll] = ClearRoll
+            [InteractionIdType.ClearRoll] = ClearRoll,
+            [InteractionIdType.ConfirmDeleteCharacter] = ConfirmDeleteCharacter,
+            [InteractionIdType.CancelDeleteCharacter] = CancelDeleteCharacter
         };
 
     /// <summary>
@@ -170,10 +172,11 @@ public static partial class EventHandler
 
         var userService = services.GetRequiredService<IUserService>();
         var enumService = services.GetRequiredService<IEnumService>();
+        var characterService = services.GetService<ICharacterService>();
         bool isEphemeral = args.Guild is not null;
 
         var viewFactory = new ViewFactory(isEphemeral, enumService, new ServerSettings());
-        var handler = new ProfileHandler(userService, enumService, viewFactory);
+        var handler = new ProfileHandler(userService, enumService, viewFactory, characterService);
 
         DiscordMessageBuilder message = targetPage switch
         {
@@ -271,6 +274,109 @@ public static partial class EventHandler
             await args.Interaction.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder(errorNotification).AsEphemeral(true));
+            return;
+        }
+
+        await args.Message.DeleteAsync();
+    }
+
+    /// <summary>
+    /// Evaluates whether a caller is authorized to confirm or cancel character deletion:
+    /// only the owner of the character is allowed to interact with the confirmation prompt.
+    /// </summary>
+    /// <param name="callerId">The Discord snowflake ID of the user clicking Confirm or Cancel.</param>
+    /// <param name="ownerUserId">The Discord snowflake ID of the character's owner.</param>
+    public static bool CanInteractWithCharacterDeletion(ulong callerId, ulong ownerUserId) =>
+        callerId == ownerUserId;
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.ConfirmDeleteCharacter"/>: permanently deletes
+    /// the character and removes their stored image assets. Only the owner who initiated the
+    /// command can confirm deletion; unauthorized callers receive an ephemeral error notification.
+    /// </summary>
+    private static async Task ConfirmDeleteCharacter(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var customId = args.Interaction.Data.CustomId;
+        var parts = customId.Split(':');
+        if (parts.Length < 3 ||
+            !ulong.TryParse(parts[1], out var characterId) ||
+            !ulong.TryParse(parts[2], out var ownerUserId))
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Invalid ConfirmDeleteCharacter custom ID: '{customId}'.");
+            return;
+        }
+
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        if (!CanInteractWithCharacterDeletion(args.User.Id, ownerUserId))
+        {
+            var errorFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+            var unauthorizedNotification = errorFactory.CreateNotification(
+                NotificationType.Error,
+                "You are not authorized to interact with this character deletion.");
+
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(unauthorizedNotification).AsEphemeral(true));
+            return;
+        }
+
+        var characterService = services.GetRequiredService<ICharacterService>();
+        var fileService = services.GetRequiredService<IFileService>();
+        var pathbuilderService = services.GetRequiredService<IPathbuilderService>();
+        var userService = services.GetRequiredService<IUserService>();
+
+        bool isEphemeral = args.Guild is not null;
+        var viewFactory = new ViewFactory(isEphemeral, enumService, new ServerSettings());
+        var handler = new CharacterHandler(
+            characterService,
+            userService,
+            pathbuilderService,
+            fileService,
+            enumService,
+            viewFactory);
+
+        var message = await handler.ConfirmDeleteAsync(args.User.Id, characterId, ownerUserId);
+
+        await args.Interaction.CreateResponseAsync(
+            InteractionResponseType.UpdateMessage,
+            new DiscordInteractionResponseBuilder(message));
+    }
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.CancelDeleteCharacter"/>: cancels the character
+    /// deletion and dismisses the confirmation message. Only the owner who initiated the
+    /// command can cancel; unauthorized callers receive an ephemeral error notification.
+    /// </summary>
+    private static async Task CancelDeleteCharacter(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var customId = args.Interaction.Data.CustomId;
+        var parts = customId.Split(':');
+        if (parts.Length < 3 ||
+            !ulong.TryParse(parts[1], out var characterId) ||
+            !ulong.TryParse(parts[2], out var ownerUserId))
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Invalid CancelDeleteCharacter custom ID: '{customId}'.");
+            return;
+        }
+
+        if (!CanInteractWithCharacterDeletion(args.User.Id, ownerUserId))
+        {
+            var enumService = services.GetRequiredService<IEnumService>();
+            var errorFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+            var unauthorizedNotification = errorFactory.CreateNotification(
+                NotificationType.Error,
+                "You are not authorized to interact with this character deletion.");
+
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(unauthorizedNotification).AsEphemeral(true));
             return;
         }
 

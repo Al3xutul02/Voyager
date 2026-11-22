@@ -1,3 +1,4 @@
+using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
 using BusinessLogic.Services.Abstractions;
@@ -14,22 +15,46 @@ public static partial class Embeds
     /// <summary>
     /// Builds the user profile embed shown by <c>/profile view</c>:
     /// title from the user's name, color from their saved palette choice,
-    /// and placeholder lists for games and characters (respecting privacy
-    /// settings when viewed by someone other than the profile owner).
+    /// and lists for games and characters (respecting privacy settings
+    /// when viewed by someone other than the profile owner).
     /// </summary>
     /// <param name="enumService">Used to translate the stored palette color to a <see cref="DiscordColor"/>.</param>
     /// <param name="userDto">The user whose profile is being rendered.</param>
     /// <param name="callerId">The Discord user ID of the person viewing the profile.</param>
+    /// <param name="characters">Optional collection of active characters owned by the user.</param>
     public static DiscordEmbedBuilder UserProfile(
-        IEnumService enumService, UserReadDto userDto, ulong callerId)
+        IEnumService enumService,
+        UserReadDto userDto,
+        ulong callerId,
+        IEnumerable<CharacterReadDto>? characters = null)
     {
         string gameList = callerId == userDto.Id || userDto.Settings.GamePrivacy == PrivacyOption.Public
             ? "_No Current Games_"
             : "_Games hidden by user_";
 
-        string characterList = callerId == userDto.Id || userDto.Settings.CharacterPrivacy == PrivacyOption.Public
-            ? "_No Current Characters_"
-            : "_Characters hidden by user_";
+        string characterList;
+        if (callerId == userDto.Id || userDto.Settings.CharacterPrivacy == PrivacyOption.Public)
+        {
+            var charList = characters?.ToList();
+            if (charList is not null && charList.Count > 0)
+            {
+                characterList = string.Join("\n", charList.Select(c =>
+                {
+                    var ancestry = string.IsNullOrWhiteSpace(c.Details.Ancestry) ? "Unknown" : c.Details.Ancestry;
+                    var cls = string.IsNullOrWhiteSpace(c.Details.Class) ? "Unknown" : c.Details.Class;
+                    var lvl = string.IsNullOrWhiteSpace(c.Details.Level) ? "1" : c.Details.Level;
+                    return $"• {c.Name} ({ancestry} {cls} {lvl})";
+                }));
+            }
+            else
+            {
+                characterList = "_No Current Characters_";
+            }
+        }
+        else
+        {
+            characterList = "_Characters hidden by user_";
+        }
 
         return new DiscordEmbedBuilder
         {

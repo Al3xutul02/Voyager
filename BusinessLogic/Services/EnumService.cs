@@ -88,7 +88,9 @@ public class EnumService : IEnumService
             [InteractionIdType.SaveRoll]          = "saveRoll",
             [InteractionIdType.ClearRoll]         = "clearRoll",
             [InteractionIdType.SaveRollModal]     = "saveRollModal",
-            [InteractionIdType.ServerChangeModal] = "serverChangeModal"
+            [InteractionIdType.ServerChangeModal] = "serverChangeModal",
+            [InteractionIdType.ConfirmDeleteCharacter] = "confirmDeleteCharacter",
+            [InteractionIdType.CancelDeleteCharacter]  = "cancelDeleteCharacter"
         }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, InteractionIdType> ReverseInteractionMap =

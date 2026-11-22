@@ -47,5 +47,15 @@ public enum InteractionIdType
     /// <summary>
     /// Modal submission custom_id for changing server settings (description, colors).
     /// </summary>
-    ServerChangeModal
+    ServerChangeModal,
+
+    /// <summary>
+    /// Button to permanently delete a character after a confirmation prompt.
+    /// </summary>
+    ConfirmDeleteCharacter,
+
+    /// <summary>
+    /// Button to cancel character deletion and dismiss the confirmation prompt.
+    /// </summary>
+    CancelDeleteCharacter
 }

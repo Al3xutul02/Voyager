@@ -1,7 +1,9 @@
 using AutoMapper;
+using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
+using BusinessLogic.Enums.Types;
 using BusinessLogic.Json;
 using BusinessLogic.Json.Models;
 using Newtonsoft.Json;
@@ -32,7 +34,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore());
+            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore())
+            .ForMember(dest => dest.Characters, opt => opt.Ignore());
 
         CreateMap<User, UserReadDto>()
             .ForCtorParam(nameof(UserReadDto.Settings),
@@ -44,7 +47,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore());
+            .ForMember(dest => dest.DiceRolls, opt => opt.Ignore())
+            .ForMember(dest => dest.Characters, opt => opt.Ignore());
 
         // Servers
         CreateMap<ServerCreateDto, Server>()
@@ -77,6 +81,32 @@ public class MappingProfile : Profile
         CreateMap<DiceRoll, DiceRollReadDto>();
 
         CreateMap<DiceRollUpdateDto, DiceRoll>()
+            .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
+
+        // Characters
+        CreateMap<CharacterCreateDto, Character>()
+            .ForMember(dest => dest.Color, opt => opt.MapFrom(src => (int)src.Color))
+            .ForMember(dest => dest.Details,
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Details, VoyagerJsonSettings.Default)))
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
+
+        CreateMap<Character, CharacterReadDto>()
+            .ForCtorParam(nameof(CharacterReadDto.Color),
+                opt => opt.MapFrom(src => (Color)src.Color))
+            .ForCtorParam(nameof(CharacterReadDto.Details),
+                opt => opt.MapFrom(src => JsonConvert.DeserializeObject<CharacterDetails>(src.Details, VoyagerJsonSettings.Default) ?? new CharacterDetails("", "", "", "", "")));
+
+        CreateMap<CharacterUpdateDto, Character>()
+            .ForMember(dest => dest.Color, opt => opt.MapFrom(src => (int)src.Color))
+            .ForMember(dest => dest.Details,
+                opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Details, VoyagerJsonSettings.Default)))
             .ForMember(dest => dest.User, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
