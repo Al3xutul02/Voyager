@@ -1,6 +1,7 @@
 using AutoMapper;
 using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
+using BusinessLogic.Dtos.Game;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
@@ -114,6 +115,36 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Details,
                 opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Details, VoyagerJsonSettings.Default)))
             .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
+
+        // Games
+        CreateMap<GameCreateDto, Game>()
+            .ForMember(dest => dest.Color, opt => opt.MapFrom(src => (int)src.Color))
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Server, opt => opt.Ignore())
+            .ForMember(dest => dest.GameMaster, opt => opt.Ignore())
+            .ForMember(dest => dest.Players, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
+
+        CreateMap<Game, GameReadDto>()
+            .ForCtorParam(nameof(GameReadDto.Color),
+                opt => opt.MapFrom(src => (Color)src.Color))
+            .ForCtorParam(nameof(GameReadDto.GameMasterName),
+                opt => opt.MapFrom(src => src.GameMaster != null ? src.GameMaster.Name : string.Empty))
+            .ForCtorParam(nameof(GameReadDto.Players),
+                opt => opt.MapFrom(src => src.Players != null
+                    ? src.Players.Where(p => p.User != null).Select(p => p.User).ToList()
+                    : new List<User>()));
+
+        CreateMap<GameUpdateDto, Game>()
+            .ForMember(dest => dest.Color, opt => opt.MapFrom(src => (int)src.Color))
+            .ForMember(dest => dest.Server, opt => opt.Ignore())
+            .ForMember(dest => dest.GameMaster, opt => opt.Ignore())
+            .ForMember(dest => dest.Players, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());

@@ -57,5 +57,25 @@ public enum InteractionIdType
     /// <summary>
     /// Button to cancel character deletion and dismiss the confirmation prompt.
     /// </summary>
-    CancelDeleteCharacter
+    CancelDeleteCharacter,
+
+    /// <summary>
+    /// Button to permanently delete a game and archive its channels after a confirmation prompt.
+    /// </summary>
+    ConfirmDeleteGame,
+
+    /// <summary>
+    /// Button to cancel game deletion and dismiss the confirmation prompt.
+    /// </summary>
+    CancelDeleteGame,
+
+    /// <summary>
+    /// Button in a DM invite message allowing a player to accept a game invitation.
+    /// </summary>
+    AcceptGameInvite,
+
+    /// <summary>
+    /// Button in a DM invite message allowing a player to decline a game invitation.
+    /// </summary>
+    DeclineGameInvite
 }
