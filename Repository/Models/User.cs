@@ -47,4 +47,14 @@ public class User
     /// Characters belonging to this user.
     /// </summary>
     public ICollection<Character> Characters { get; set; } = [];
+
+    /// <summary>
+    /// Games hosted by this user as Game Master.
+    /// </summary>
+    public ICollection<Game> HostedGames { get; set; } = [];
+
+    /// <summary>
+    /// Games this user is participating in as a player.
+    /// </summary>
+    public ICollection<GamePlayer> GameParticipations { get; set; } = [];
 }

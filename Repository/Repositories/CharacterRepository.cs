@@ -47,4 +47,18 @@ public class CharacterRepository(DbContext context) : BaseRepository<ulong, Char
     {
         return await _dbSet.CountAsync(c => c.UserId == userId && c.DeletedAt == null);
     }
+
+    /// <inheritdoc />
+    public async Task UpdateCurrentGameAsync(string oldGameName, string? newGameName)
+    {
+        var characters = await _dbSet
+            .Where(c => c.CurrentGame == oldGameName && c.DeletedAt == null)
+            .ToListAsync();
+
+        foreach (var character in characters)
+        {
+            character.CurrentGame = newGameName;
+            character.UpdatedAt = DateTime.UtcNow;
+        }
+    }
 }

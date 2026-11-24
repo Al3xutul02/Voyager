@@ -52,4 +52,9 @@ public class Server
     /// Optional UTC timestamp when the server record was soft-deleted, or <c>null</c> if active.
     /// </summary>
     public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
+    /// Games hosted on this server.
+    /// </summary>
+    public ICollection<Game> Games { get; set; } = [];
 }

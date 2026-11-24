@@ -41,4 +41,13 @@ public interface ICharacterRepository : IBaseRepository<ulong, Character>
     /// <param name="userId">The Discord snowflake ID of the user.</param>
     /// <returns>The total number of characters owned by <paramref name="userId"/>.</returns>
     public Task<int> GetCountByUserIdAsync(ulong userId);
+
+    /// <summary>
+    /// Updates <see cref="Character.CurrentGame"/> for all active characters currently associated
+    /// with <paramref name="oldGameName"/> (e.g., setting it to <c>null</c> when a game is deleted
+    /// or to a new name when a game is renamed).
+    /// </summary>
+    /// <param name="oldGameName">The previous game name on the characters.</param>
+    /// <param name="newGameName">The new game name, or <c>null</c> to clear the game association.</param>
+    public Task UpdateCurrentGameAsync(string oldGameName, string? newGameName);
 }

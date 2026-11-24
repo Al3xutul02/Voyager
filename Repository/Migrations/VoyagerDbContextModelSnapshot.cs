@@ -121,6 +121,93 @@ namespace Repository.Migrations
                     b.ToTable("dice_rolls", (string)null);
                 });
 
+            modelBuilder.Entity("Repository.Models.Game", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<ulong>("Id"));
+
+                    b.Property<ulong>("CategoryId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong>("CharactersChannelId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<int>("Color")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<ulong>("GameMasterId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong>("GeneralChannelId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong>("GmChannelId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("GmTokenImagePath")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<ulong>("NpcsChannelId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong>("ServerId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("ThumbnailImagePath")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameMasterId");
+
+                    b.HasIndex("ServerId", "Name");
+
+                    b.ToTable("games", (string)null);
+                });
+
+            modelBuilder.Entity("Repository.Models.GamePlayer", b =>
+                {
+                    b.Property<ulong>("GameId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong>("UserId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("GameId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("game_players", (string)null);
+                });
+
             modelBuilder.Entity("Repository.Models.Server", b =>
                 {
                     b.Property<ulong>("Id")
@@ -208,11 +295,63 @@ namespace Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Repository.Models.Game", b =>
+                {
+                    b.HasOne("Repository.Models.User", "GameMaster")
+                        .WithMany("HostedGames")
+                        .HasForeignKey("GameMasterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Repository.Models.Server", "Server")
+                        .WithMany("Games")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameMaster");
+
+                    b.Navigation("Server");
+                });
+
+            modelBuilder.Entity("Repository.Models.GamePlayer", b =>
+                {
+                    b.HasOne("Repository.Models.Game", "Game")
+                        .WithMany("Players")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Repository.Models.User", "User")
+                        .WithMany("GameParticipations")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Repository.Models.Game", b =>
+                {
+                    b.Navigation("Players");
+                });
+
+            modelBuilder.Entity("Repository.Models.Server", b =>
+                {
+                    b.Navigation("Games");
+                });
+
             modelBuilder.Entity("Repository.Models.User", b =>
                 {
                     b.Navigation("Characters");
 
                     b.Navigation("DiceRolls");
+
+                    b.Navigation("GameParticipations");
+
+                    b.Navigation("HostedGames");
                 });
 #pragma warning restore 612, 618
         }

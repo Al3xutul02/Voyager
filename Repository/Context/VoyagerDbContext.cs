@@ -29,6 +29,16 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
     /// </summary>
     public DbSet<Character> Characters { get; set; } = null!;
 
+    /// <summary>
+    /// All games hosted on servers in Normal mode. Mapped to the <c>games</c> table.
+    /// </summary>
+    public DbSet<Game> Games { get; set; } = null!;
+
+    /// <summary>
+    /// All player enrollments in games. Mapped to the <c>game_players</c> table.
+    /// </summary>
+    public DbSet<GamePlayer> GamePlayers { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity => {
@@ -184,6 +194,96 @@ public class VoyagerDbContext(DbContextOptions<VoyagerDbContext> options) : DbCo
                   .HasColumnType("datetime");
 
             entity.HasIndex(c => new { c.UserId, c.Name });
+        });
+
+        modelBuilder.Entity<Game>(entity =>
+        {
+            entity.ToTable("games");
+            entity.HasKey(g => g.Id);
+
+            entity.Property(g => g.Id)
+                  .ValueGeneratedOnAdd();
+
+            entity.Property(g => g.ServerId)
+                  .IsRequired();
+
+            entity.HasOne(g => g.Server)
+                  .WithMany(s => s.Games)
+                  .HasForeignKey(g => g.ServerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(g => g.GameMasterId)
+                  .IsRequired();
+
+            entity.HasOne(g => g.GameMaster)
+                  .WithMany(u => u.HostedGames)
+                  .HasForeignKey(g => g.GameMasterId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(g => g.Name)
+                  .HasMaxLength(100)
+                  .IsRequired();
+
+            entity.Property(g => g.Description)
+                  .HasColumnType("text")
+                  .IsRequired();
+
+            entity.Property(g => g.Color)
+                  .IsRequired();
+
+            entity.Property(g => g.GmTokenImagePath)
+                  .HasMaxLength(255)
+                  .IsRequired();
+
+            entity.Property(g => g.ThumbnailImagePath)
+                  .HasMaxLength(255)
+                  .IsRequired();
+
+            entity.Property(g => g.CategoryId)
+                  .IsRequired();
+
+            entity.Property(g => g.GmChannelId)
+                  .IsRequired();
+
+            entity.Property(g => g.GeneralChannelId)
+                  .IsRequired();
+
+            entity.Property(g => g.CharactersChannelId)
+                  .IsRequired();
+
+            entity.Property(g => g.NpcsChannelId)
+                  .IsRequired();
+
+            entity.Property(g => g.CreatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(g => g.UpdatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+            entity.Property(g => g.DeletedAt)
+                  .HasColumnType("datetime");
+
+            entity.HasIndex(g => new { g.ServerId, g.Name });
+        });
+
+        modelBuilder.Entity<GamePlayer>(entity =>
+        {
+            entity.ToTable("game_players");
+            entity.HasKey(gp => new { gp.GameId, gp.UserId });
+
+            entity.HasOne(gp => gp.Game)
+                  .WithMany(g => g.Players)
+                  .HasForeignKey(gp => gp.GameId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(gp => gp.User)
+                  .WithMany(u => u.GameParticipations)
+                  .HasForeignKey(gp => gp.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(gp => gp.JoinedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
         });
     }
 }

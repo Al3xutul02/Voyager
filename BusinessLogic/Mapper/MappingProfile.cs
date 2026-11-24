@@ -35,7 +35,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DiceRolls, opt => opt.Ignore())
-            .ForMember(dest => dest.Characters, opt => opt.Ignore());
+            .ForMember(dest => dest.Characters, opt => opt.Ignore())
+            .ForMember(dest => dest.HostedGames, opt => opt.Ignore())
+            .ForMember(dest => dest.GameParticipations, opt => opt.Ignore());
 
         CreateMap<User, UserReadDto>()
             .ForCtorParam(nameof(UserReadDto.Settings),
@@ -48,7 +50,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DiceRolls, opt => opt.Ignore())
-            .ForMember(dest => dest.Characters, opt => opt.Ignore());
+            .ForMember(dest => dest.Characters, opt => opt.Ignore())
+            .ForMember(dest => dest.HostedGames, opt => opt.Ignore())
+            .ForMember(dest => dest.GameParticipations, opt => opt.Ignore());
 
         // Servers
         CreateMap<ServerCreateDto, Server>()
@@ -57,7 +61,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Description, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.Games, opt => opt.Ignore());
 
         CreateMap<Server, ServerReadDto>()
             .ForCtorParam(nameof(ServerReadDto.Settings),
@@ -68,7 +73,8 @@ public class MappingProfile : Profile
                 opt => opt.MapFrom(src => JsonConvert.SerializeObject(src.Settings, VoyagerJsonSettings.Default)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore());
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.Games, opt => opt.Ignore());
 
         // DiceRolls
         CreateMap<DiceRollCreateDto, DiceRoll>()
