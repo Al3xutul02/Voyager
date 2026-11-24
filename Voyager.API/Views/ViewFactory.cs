@@ -1,5 +1,6 @@
 using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
+using BusinessLogic.Dtos.Game;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
@@ -67,13 +68,15 @@ public class ViewFactory(
     /// <param name="userDto">The user whose profile is being rendered.</param>
     /// <param name="callerId">The Discord user ID of the person who invoked the command.</param>
     /// <param name="characters">Optional collection of active characters owned by the user.</param>
+    /// <param name="games">Optional collection of active games the user runs or plays in.</param>
     public DiscordMessageBuilder CreateUserProfile(
         UserReadDto userDto,
         ulong callerId,
-        IEnumerable<CharacterReadDto>? characters = null)
+        IEnumerable<CharacterReadDto>? characters = null,
+        IEnumerable<GameReadDto>? games = null)
     {
         var messageBuilder = new DiscordMessageBuilder()
-            .AddEmbed(Embeds.UserProfile(_enumService, userDto, callerId, characters));
+            .AddEmbed(Embeds.UserProfile(_enumService, userDto, callerId, characters, games));
 
         if (callerId == userDto.Id)
             messageBuilder.AddComponents(Selects.SwitchProfilePage(_enumService, ProfilePage.Profile));
@@ -141,6 +144,89 @@ public class ViewFactory(
             .AddComponents(
                 Buttons.ConfirmDeleteCharacter(_enumService, character.Id, callerId),
                 Buttons.CancelDeleteCharacter(_enumService, character.Id, callerId));
+    }
+
+    /// <summary>
+    /// Builds the game details message used by <c>/game details</c>:
+    /// attaches the game thumbnail image, renders the game details embed,
+    /// and appends a "Clear" button when non-ephemeral.
+    /// </summary>
+    /// <param name="game">The game DTO to display.</param>
+    /// <param name="thumbnailStream">Optional stream for the game's thumbnail image.</param>
+    public DiscordMessageBuilder CreateGameDetails(
+        GameReadDto game,
+        Stream? thumbnailStream = null)
+    {
+        var messageBuilder = new DiscordMessageBuilder();
+
+        if (thumbnailStream is not null)
+        {
+            messageBuilder.AddFile("thumbnail.png", thumbnailStream);
+        }
+
+        messageBuilder.AddEmbed(Embeds.GameDetails(
+            _enumService,
+            game,
+            hasThumbnailAttachment: thumbnailStream is not null));
+
+        if (!_isEphemeral)
+        {
+            messageBuilder.AddComponents(Buttons.ClearMessage(_enumService, "Clear"));
+        }
+
+        return messageBuilder;
+    }
+
+    /// <summary>
+    /// Builds the confirmation warning prompt message for <c>/game delete</c>:
+    /// the warning embed plus "Confirm Delete" and "Cancel" buttons restricted to the caller.
+    /// </summary>
+    /// <param name="game">The game to be deleted.</param>
+    /// <param name="callerId">The Discord snowflake ID of the calling user.</param>
+    public DiscordMessageBuilder CreateGameDeleteConfirmation(
+        GameReadDto game,
+        ulong callerId)
+    {
+        return new DiscordMessageBuilder()
+            .AddEmbed(Embeds.GameDeleteConfirmation(_enumService, Settings, game.Name))
+            .AddComponents(
+                Buttons.ConfirmDeleteGame(_enumService, game.Id, callerId),
+                Buttons.CancelDeleteGame(_enumService, game.Id, callerId));
+    }
+
+    /// <summary>
+    /// Builds the DM game invitation message sent when a GM runs <c>/game invite</c>:
+    /// attaches the game thumbnail image, renders the invitation embed, and adds
+    /// "Accept" and "Deny" buttons for the invited player.
+    /// </summary>
+    /// <param name="game">The game DTO the player is invited to.</param>
+    /// <param name="serverName">The name of the Discord server hosting the game.</param>
+    /// <param name="invitedUserId">The Discord snowflake ID of the invited player.</param>
+    /// <param name="thumbnailStream">Optional stream for the game's thumbnail image.</param>
+    public DiscordMessageBuilder CreateGameInvite(
+        GameReadDto game,
+        string serverName,
+        ulong invitedUserId,
+        Stream? thumbnailStream = null)
+    {
+        var messageBuilder = new DiscordMessageBuilder();
+
+        if (thumbnailStream is not null)
+        {
+            messageBuilder.AddFile("thumbnail.png", thumbnailStream);
+        }
+
+        messageBuilder
+            .AddEmbed(Embeds.GameInvite(
+                _enumService,
+                game,
+                serverName,
+                hasThumbnailAttachment: thumbnailStream is not null))
+            .AddComponents(
+                Buttons.AcceptGameInvite(_enumService, game.Id, invitedUserId),
+                Buttons.DeclineGameInvite(_enumService, game.Id, invitedUserId));
+
+        return messageBuilder;
     }
 
     /// <summary>

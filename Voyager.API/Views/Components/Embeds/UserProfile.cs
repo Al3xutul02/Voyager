@@ -1,4 +1,5 @@
 using BusinessLogic.Dtos.Character;
+using BusinessLogic.Dtos.Game;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
 using BusinessLogic.Services.Abstractions;
@@ -22,15 +23,35 @@ public static partial class Embeds
     /// <param name="userDto">The user whose profile is being rendered.</param>
     /// <param name="callerId">The Discord user ID of the person viewing the profile.</param>
     /// <param name="characters">Optional collection of active characters owned by the user.</param>
+    /// <param name="games">Optional collection of active games the user runs or plays in.</param>
     public static DiscordEmbedBuilder UserProfile(
         IEnumService enumService,
         UserReadDto userDto,
         ulong callerId,
-        IEnumerable<CharacterReadDto>? characters = null)
+        IEnumerable<CharacterReadDto>? characters = null,
+        IEnumerable<GameReadDto>? games = null)
     {
-        string gameList = callerId == userDto.Id || userDto.Settings.GamePrivacy == PrivacyOption.Public
-            ? "_No Current Games_"
-            : "_Games hidden by user_";
+        string gameList;
+        if (callerId == userDto.Id || userDto.Settings.GamePrivacy == PrivacyOption.Public)
+        {
+            var gList = games?.ToList();
+            if (gList is not null && gList.Count > 0)
+            {
+                gameList = string.Join("\n", gList.Select(g =>
+                {
+                    var role = g.GameMasterId == userDto.Id ? "GM" : "Player";
+                    return $"• {g.Name} ({role})";
+                }));
+            }
+            else
+            {
+                gameList = "_No Current Games_";
+            }
+        }
+        else
+        {
+            gameList = "_Games hidden by user_";
+        }
 
         string characterList;
         if (callerId == userDto.Id || userDto.Settings.CharacterPrivacy == PrivacyOption.Public)
