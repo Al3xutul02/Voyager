@@ -141,6 +141,7 @@ public class Program
         builder.Services.AddScoped<IServerService, ServerService>();
         builder.Services.AddScoped<IDiceRollService, DiceRollService>();
         builder.Services.AddScoped<ICharacterService, CharacterService>();
+        builder.Services.AddScoped<IGameService, GameService>();
         builder.Services.AddHttpClient<IFileService, FileService>(client =>
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd(
@@ -158,6 +159,7 @@ public class Program
         builder.Services.AddScoped<IServerRepository, ServerRepository>();
         builder.Services.AddScoped<IDiceRollRepository, DiceRollRepository>();
         builder.Services.AddScoped<ICharacterRepository, CharacterRepository>();
+        builder.Services.AddScoped<IGameRepository, GameRepository>();
 
         var app = builder.Build();
 

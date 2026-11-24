@@ -19,16 +19,19 @@ namespace Voyager.API.Commands.Handlers;
 /// <param name="enumService">Converts color names and interaction IDs.</param>
 /// <param name="viewFactory">Builds the Discord message for the response.</param>
 /// <param name="characterService">Optional source of user characters.</param>
+/// <param name="gameService">Optional source of user games.</param>
 public class ProfileHandler(
     IUserService userService,
     IEnumService enumService,
     ViewFactory viewFactory,
-    ICharacterService? characterService = null)
+    ICharacterService? characterService = null,
+    IGameService? gameService = null)
 {
     private readonly IUserService _userService = userService;
     private readonly IEnumService _enumService = enumService;
     private readonly ViewFactory _viewFactory = viewFactory;
     private readonly ICharacterService? _characterService = characterService;
+    private readonly IGameService? _gameService = gameService;
 
     /// <summary>
     /// Builds the response for <c>/profile view</c>: the user's profile card
@@ -49,7 +52,11 @@ public class ProfileHandler(
             ? (await _characterService.GetByUserIdAsync(userId)).ToList()
             : null;
 
-        return _viewFactory.CreateUserProfile(result, callerId, characters);
+        var games = _gameService is not null
+            ? (await _gameService.GetByUserIdAsync(userId)).ToList()
+            : null;
+
+        return _viewFactory.CreateUserProfile(result, callerId, characters, games);
     }
 
     /// <summary>

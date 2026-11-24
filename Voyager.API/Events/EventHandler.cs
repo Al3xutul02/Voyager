@@ -44,7 +44,11 @@ public static partial class EventHandler
             [InteractionIdType.SaveRoll] = SaveRoll,
             [InteractionIdType.ClearRoll] = ClearRoll,
             [InteractionIdType.ConfirmDeleteCharacter] = ConfirmDeleteCharacter,
-            [InteractionIdType.CancelDeleteCharacter] = CancelDeleteCharacter
+            [InteractionIdType.CancelDeleteCharacter] = CancelDeleteCharacter,
+            [InteractionIdType.ConfirmDeleteGame] = ConfirmDeleteGame,
+            [InteractionIdType.CancelDeleteGame] = CancelDeleteGame,
+            [InteractionIdType.AcceptGameInvite] = AcceptGameInvite,
+            [InteractionIdType.DeclineGameInvite] = DeclineGameInvite
         };
 
     /// <summary>
@@ -173,10 +177,11 @@ public static partial class EventHandler
         var userService = services.GetRequiredService<IUserService>();
         var enumService = services.GetRequiredService<IEnumService>();
         var characterService = services.GetService<ICharacterService>();
+        var gameService = services.GetService<IGameService>();
         bool isEphemeral = args.Guild is not null;
 
         var viewFactory = new ViewFactory(isEphemeral, enumService, new ServerSettings());
-        var handler = new ProfileHandler(userService, enumService, viewFactory, characterService);
+        var handler = new ProfileHandler(userService, enumService, viewFactory, characterService, gameService);
 
         DiscordMessageBuilder message = targetPage switch
         {
@@ -381,6 +386,196 @@ public static partial class EventHandler
         }
 
         await args.Message.DeleteAsync();
+    }
+
+    /// <summary>
+    /// Evaluates whether a caller is authorized to confirm or cancel game deletion:
+    /// only the user who initiated the <c>/game delete</c> prompt is allowed to interact with it.
+    /// </summary>
+    /// <param name="callerId">The Discord snowflake ID of the user clicking Confirm or Cancel.</param>
+    /// <param name="authorizedUserId">The Discord snowflake ID of the user who initiated deletion.</param>
+    public static bool CanInteractWithGameDeletion(ulong callerId, ulong authorizedUserId) =>
+        callerId == authorizedUserId;
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.ConfirmDeleteGame"/>: archives the game's channels,
+    /// soft-deletes the game in the database, clears <c>CurrentGame</c> on associated characters,
+    /// and removes stored image assets.
+    /// </summary>
+    private static async Task ConfirmDeleteGame(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var customId = args.Interaction.Data.CustomId;
+        var parts = customId.Split(':');
+        if (parts.Length < 3 ||
+            !ulong.TryParse(parts[1], out var gameId) ||
+            !ulong.TryParse(parts[2], out var authorizedUserId))
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Invalid ConfirmDeleteGame custom ID: '{customId}'.");
+            return;
+        }
+
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        if (!CanInteractWithGameDeletion(args.User.Id, authorizedUserId))
+        {
+            var errorFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+            var unauthorizedNotification = errorFactory.CreateNotification(
+                NotificationType.Error,
+                "You are not authorized to interact with this game deletion.");
+
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(unauthorizedNotification).AsEphemeral(true));
+            return;
+        }
+
+        await args.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
+
+        var gameService = services.GetRequiredService<IGameService>();
+        var serverService = services.GetRequiredService<IServerService>();
+        var userService = services.GetRequiredService<IUserService>();
+        var fileService = services.GetRequiredService<IFileService>();
+
+        var viewFactory = new ViewFactory(isEphemeral: false, enumService, new ServerSettings());
+        var handler = new GameHandler(
+            gameService,
+            serverService,
+            userService,
+            fileService,
+            enumService,
+            viewFactory);
+
+        var message = await handler.ConfirmDeleteAsync(args.Guild, args.User.Id, gameId, authorizedUserId);
+        await args.Interaction.EditOriginalResponseAsync(new DiscordWebhookBuilder(message));
+    }
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.CancelDeleteGame"/>: cancels the game
+    /// deletion and dismisses the confirmation message.
+    /// </summary>
+    private static async Task CancelDeleteGame(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services)
+    {
+        var customId = args.Interaction.Data.CustomId;
+        var parts = customId.Split(':');
+        if (parts.Length < 3 ||
+            !ulong.TryParse(parts[1], out var gameId) ||
+            !ulong.TryParse(parts[2], out var authorizedUserId))
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Invalid CancelDeleteGame custom ID: '{customId}'.");
+            return;
+        }
+
+        if (!CanInteractWithGameDeletion(args.User.Id, authorizedUserId))
+        {
+            var enumService = services.GetRequiredService<IEnumService>();
+            var errorFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+            var unauthorizedNotification = errorFactory.CreateNotification(
+                NotificationType.Error,
+                "You are not authorized to interact with this game deletion.");
+
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(unauthorizedNotification).AsEphemeral(true));
+            return;
+        }
+
+        await args.Message.DeleteAsync();
+    }
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.AcceptGameInvite"/>: enrolls the invited player
+    /// in the game, updates the DM message, and notifies the game's <c>gm-channel</c>.
+    /// </summary>
+    private static Task AcceptGameInvite(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services) =>
+        HandleGameInviteResponseAsync(sender, args, services, accepted: true);
+
+    /// <summary>
+    /// Handler for <see cref="InteractionIdType.DeclineGameInvite"/>: declines the game invitation,
+    /// updates the DM message, and notifies the game's <c>gm-channel</c>.
+    /// </summary>
+    private static Task DeclineGameInvite(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services) =>
+        HandleGameInviteResponseAsync(sender, args, services, accepted: false);
+
+    private static async Task HandleGameInviteResponseAsync(
+        DiscordClient sender,
+        ComponentInteractionCreateEventArgs args,
+        IServiceProvider services,
+        bool accepted)
+    {
+        var customId = args.Interaction.Data.CustomId;
+        var parts = customId.Split(':');
+        if (parts.Length < 3 ||
+            !ulong.TryParse(parts[1], out var gameId) ||
+            !ulong.TryParse(parts[2], out var invitedUserId))
+        {
+            Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Invalid GameInvite custom ID: '{customId}'.");
+            return;
+        }
+
+        var enumService = services.GetRequiredService<IEnumService>();
+
+        if (args.User.Id != invitedUserId)
+        {
+            var errorFactory = new ViewFactory(isEphemeral: true, enumService, new ServerSettings());
+            var unauthorizedNotification = errorFactory.CreateNotification(
+                NotificationType.Error,
+                "This game invitation is not for you.");
+
+            await args.Interaction.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder(unauthorizedNotification).AsEphemeral(true));
+            return;
+        }
+
+        var gameService = services.GetRequiredService<IGameService>();
+        var serverService = services.GetRequiredService<IServerService>();
+        var userService = services.GetRequiredService<IUserService>();
+        var fileService = services.GetRequiredService<IFileService>();
+
+        var viewFactory = new ViewFactory(isEphemeral: false, enumService, new ServerSettings());
+        var handler = new GameHandler(
+            gameService,
+            serverService,
+            userService,
+            fileService,
+            enumService,
+            viewFactory);
+
+        var (dmResponse, gmChannelId, gmNotification) = await handler.HandleInviteResponseAsync(
+            args.User.Id,
+            args.User.Username,
+            gameId,
+            invitedUserId,
+            accepted);
+
+        await args.Interaction.CreateResponseAsync(
+            InteractionResponseType.UpdateMessage,
+            new DiscordInteractionResponseBuilder(dmResponse));
+
+        if (gmChannelId.HasValue && gmNotification is not null)
+        {
+            try
+            {
+                var gmChannel = await sender.GetChannelAsync(gmChannelId.Value);
+                await gmChannel.SendMessageAsync(gmNotification);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[{DateTime.UtcNow.ToLocalTime()}] Failed to send invite response notification to gm-channel {gmChannelId}: {ex}");
+            }
+        }
     }
 
     /// <summary>
