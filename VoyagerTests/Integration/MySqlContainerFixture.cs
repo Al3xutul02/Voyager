@@ -85,6 +85,8 @@ public static class MySqlContainerFixture
     public static async Task ResetAsync()
     {
         await using var context = CreateContext();
+        await context.GamePlayers.ExecuteDeleteAsync();
+        await context.Games.ExecuteDeleteAsync();
         await context.Characters.ExecuteDeleteAsync();
         await context.DiceRolls.ExecuteDeleteAsync();
         await context.Users.ExecuteDeleteAsync();

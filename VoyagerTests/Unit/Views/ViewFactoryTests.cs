@@ -1,5 +1,6 @@
 using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
+using BusinessLogic.Dtos.Game;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
@@ -367,5 +368,106 @@ public class ViewFactoryTests
         var cancelBtn = (DiscordButtonComponent)row[1];
         Assert.AreEqual(ButtonStyle.Secondary, cancelBtn.Style);
         Assert.AreEqual("cancelDeleteCharacter:42:100", cancelBtn.CustomId);
+    }
+
+    // ---- Game views -----------------------------------------------------
+
+    [TestMethod]
+    public void CreateUserProfile_WithGames_FormatsListWithGmAndPlayerRoles()
+    {
+        var userDto = new UserReadDto(
+            123,
+            "Al3x",
+            new UserSettings(Color.Teal, PrivacyOption.Public, PrivacyOption.Public));
+
+        var games = new List<GameReadDto>
+        {
+            new(1, 100, 123, "Al3x", "Abomination Vaults", "Desc", Color.Purple, "gm.png", "thumb.png", 1, 2, 3, 4, 5, []),
+            new(2, 100, 999, "OtherGM", "Kingmaker", "Desc", Color.Gold, "gm2.png", "thumb2.png", 6, 7, 8, 9, 10, [userDto])
+        };
+
+        var message = _ephemeralSut.CreateUserProfile(userDto, callerId: 123, characters: null, games: games);
+
+        var embed = message.Embeds[0];
+        var gamesField = embed.Fields[0];
+        StringAssert.Contains(gamesField.Value, "• Abomination Vaults (GM)");
+        StringAssert.Contains(gamesField.Value, "• Kingmaker (Player)");
+    }
+
+    [TestMethod]
+    public void CreateGameDetails_RendersFieldsAndThumbnailAttachment()
+    {
+        var players = new List<UserReadDto>
+        {
+            new(42, "Kyra", new UserSettings()),
+            new(43, "Valeros", new UserSettings())
+        };
+        var game = new GameReadDto(
+            Id: 1,
+            ServerId: 100,
+            GameMasterId: 10,
+            GameMasterName: "GM_Ezren",
+            Name: "Abomination Vaults",
+            Description: "Otari adventure",
+            Color: Color.Purple,
+            GmTokenImagePath: "gm.png",
+            ThumbnailImagePath: "thumb.png",
+            CategoryId: 1,
+            GmChannelId: 2,
+            GeneralChannelId: 3,
+            CharactersChannelId: 4,
+            NpcsChannelId: 5,
+            Players: players);
+
+        using var thumbStream = new MemoryStream([1, 2, 3]);
+        var message = _ephemeralSut.CreateGameDetails(game, thumbStream);
+
+        Assert.HasCount(1, message.Embeds);
+        var embed = message.Embeds[0];
+        Assert.AreEqual("Abomination Vaults", embed.Title);
+        Assert.AreEqual("Otari adventure", embed.Description);
+        Assert.AreEqual("attachment://thumbnail.png", embed.Thumbnail.Url?.ToString());
+        Assert.AreEqual("GM_Ezren", embed.Fields.Single(f => f.Name == "Game Master").Value);
+        StringAssert.Contains(embed.Fields.Single(f => f.Name == "Players").Value, "• Kyra");
+        StringAssert.Contains(embed.Fields.Single(f => f.Name == "Players").Value, "• Valeros");
+    }
+
+    [TestMethod]
+    public void CreateGameDeleteConfirmation_RendersWarningAndRestrictedButtons()
+    {
+        var game = new GameReadDto(
+            15, 100, 10, "GM_Ezren", "Kingmaker", "Desc", Color.Gold, "gm.png", "thumb.png", 1, 2, 3, 4, 5, []);
+
+        var message = _nonEphemeralSut.CreateGameDeleteConfirmation(game, callerId: 10);
+
+        Assert.HasCount(1, message.Embeds);
+        Assert.AreEqual("Delete Game: Kingmaker", message.Embeds[0].Title);
+        Assert.HasCount(1, message.Components);
+        var row = message.Components[0].Components.Cast<DiscordButtonComponent>().ToList();
+        Assert.HasCount(2, row);
+        Assert.AreEqual("confirmDeleteGame:15:10", row[0].CustomId);
+        Assert.AreEqual("cancelDeleteGame:15:10", row[1].CustomId);
+    }
+
+    [TestMethod]
+    public void CreateGameInvite_RendersInviteEmbedAndAcceptDenyButtons()
+    {
+        var game = new GameReadDto(
+            15, 100, 10, "GM_Ezren", "Kingmaker", "Stolen Lands campaign", Color.Gold, "gm.png", "thumb.png", 1, 2, 3, 4, 5, []);
+
+        using var thumbStream = new MemoryStream([1, 2, 3]);
+        var message = _nonEphemeralSut.CreateGameInvite(game, "Golarion Guild", invitedUserId: 42, thumbStream);
+
+        Assert.HasCount(1, message.Embeds);
+        var embed = message.Embeds[0];
+        Assert.AreEqual("Kingmaker", embed.Title);
+        Assert.AreEqual("Game Invitation • Golarion Guild", embed.Author.Name);
+        Assert.AreEqual("attachment://thumbnail.png", embed.Thumbnail.Url?.ToString());
+
+        Assert.HasCount(1, message.Components);
+        var row = message.Components[0].Components.Cast<DiscordButtonComponent>().ToList();
+        Assert.HasCount(2, row);
+        Assert.AreEqual("acceptGameInvite:15:42", row[0].CustomId);
+        Assert.AreEqual("declineGameInvite:15:42", row[1].CustomId);
     }
 }

@@ -1,6 +1,7 @@
 using AutoMapper;
 using BusinessLogic.Dtos.Character;
 using BusinessLogic.Dtos.DiceRoll;
+using BusinessLogic.Dtos.Game;
 using BusinessLogic.Dtos.Server;
 using BusinessLogic.Dtos.User;
 using BusinessLogic.Enums.Types;
@@ -342,5 +343,89 @@ public class MappingProfileTests
         var details = JsonConvert.DeserializeObject<CharacterDetails>(entity.Details, VoyagerJsonSettings.Default);
         Assert.IsNotNull(details);
         Assert.AreEqual("2", details!.Level);
+    }
+
+    // ---- Game mappings --------------------------------------------------
+
+    [TestMethod]
+    public void Map_GameToGameReadDto_MapsColorGameMasterNameAndPlayersViaCtorParams()
+    {
+        var userSettingsJson = JsonConvert.SerializeObject(new UserSettings(Color.Blue), VoyagerJsonSettings.Default);
+        var gm = new User { Id = 10, Name = "GM_Ezren", Settings = userSettingsJson };
+        var playerUser = new User { Id = 42, Name = "Kyra", Settings = userSettingsJson };
+
+        var entity = new Game
+        {
+            Id = 5,
+            ServerId = 100,
+            GameMasterId = 10,
+            GameMaster = gm,
+            Name = "Abomination Vaults",
+            Description = "Dungeon crawl",
+            Color = (int)Color.Purple,
+            GmTokenImagePath = "Games/100/5/gm.png",
+            ThumbnailImagePath = "Games/100/5/thumb.png",
+            CategoryId = 500,
+            GmChannelId = 501,
+            GeneralChannelId = 502,
+            CharactersChannelId = 503,
+            NpcsChannelId = 504,
+            Players = [new GamePlayer { GameId = 5, UserId = 42, User = playerUser }]
+        };
+
+        var dto = _mapper.Map<GameReadDto>(entity);
+
+        Assert.AreEqual(5UL, dto.Id);
+        Assert.AreEqual(100UL, dto.ServerId);
+        Assert.AreEqual(10UL, dto.GameMasterId);
+        Assert.AreEqual("GM_Ezren", dto.GameMasterName);
+        Assert.AreEqual("Abomination Vaults", dto.Name);
+        Assert.AreEqual(Color.Purple, dto.Color);
+        Assert.HasCount(1, dto.Players);
+        Assert.AreEqual("Kyra", dto.Players[0].Name);
+        Assert.AreEqual(Color.Blue, dto.Players[0].Settings.Color);
+    }
+
+    [TestMethod]
+    public void Map_GameCreateDtoAndUpdateDtoToGame_MapsAllProperties()
+    {
+        var createDto = new GameCreateDto(
+            ServerId: 100,
+            GameMasterId: 10,
+            Name: "Kingmaker",
+            Description: "Stolen Lands",
+            Color: Color.Gold,
+            GmTokenImagePath: "gm.png",
+            ThumbnailImagePath: "thumb.png",
+            CategoryId: 1,
+            GmChannelId: 2,
+            GeneralChannelId: 3,
+            CharactersChannelId: 4,
+            NpcsChannelId: 5);
+
+        var createdEntity = _mapper.Map<Game>(createDto);
+        Assert.AreEqual("Kingmaker", createdEntity.Name);
+        Assert.AreEqual((int)Color.Gold, createdEntity.Color);
+        Assert.AreEqual(2UL, createdEntity.GmChannelId);
+
+        var updateDto = new GameUpdateDto(
+            Id: 9,
+            ServerId: 100,
+            GameMasterId: 10,
+            Name: "Kingmaker 2e",
+            Description: "Updated",
+            Color: Color.Green,
+            GmTokenImagePath: "gm2.png",
+            ThumbnailImagePath: "thumb2.png",
+            CategoryId: 1,
+            GmChannelId: 2,
+            GeneralChannelId: 3,
+            CharactersChannelId: 4,
+            NpcsChannelId: 5);
+
+        var updatedEntity = _mapper.Map<Game>(updateDto);
+        Assert.AreEqual(9UL, updatedEntity.Id);
+        Assert.AreEqual("Kingmaker 2e", updatedEntity.Name);
+        Assert.AreEqual((int)Color.Green, updatedEntity.Color);
     }
 }
